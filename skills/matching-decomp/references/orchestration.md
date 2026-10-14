@@ -116,7 +116,9 @@ in the project's decomp guide and hand the class of functions to mid-size worker
 
 1. `dk rescue` if workers were interrupted; `dk docs --commit` so the published numbers are current.
 2. Run the full build on the committed HEAD in a separate git worktree (generated files of running workers stay
-   untouched): split → (re-add missing `INCLUDE_ASM` lines) → build → compare. Push only if byte-identical. A script
+   untouched): split → (re-add missing `INCLUDE_ASM` lines) → build → compare. Push only if byte-identical.
+   Push only through that check, even a docs or tool commit: `git push` sends every worker commit since the last
+   verified one too (in gh3-decomp a plain push of a script fix published a tree that did not rebuild). A script
    for this (`scripts/integrate.sh` in the reference project) makes it one command.
 3. If it fails, find the first function whose address moved (compare symbol addresses of the rebuilt ELF with the
    original), not the first differing byte: the cause is usually a missing padding, a missing data declaration or a

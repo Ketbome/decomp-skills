@@ -2,6 +2,7 @@
 
 ## 1.5.2 — 2026-10-14
 
+- Push only through the integration check, docs and tool commits included (orchestration.md).
 - Workers stop only at their limit or when `dk next --untried` is empty (worker.md, agent_protocol template): a
   whole round stopped early "for lack of viable candidates" with thousands untried.
 
