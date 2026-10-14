@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.5.0 — 2026-10-14
+
+- Toolchain forensics: when no rule can be found (original assembler unavailable, context-dependent pattern), copy
+  the value per occurrence from the original `.s`, documented as inferred; the SN `div.s` nops as the worked case
+  (catalogue row), and other vendor compiler builds as a way to find which tool adds a pattern.
+- Permuter: its input is the near-miss copy; keep prototypes of the same file's other functions in `base.c`;
+  measured cost of a batch beside running workers.
+- Orchestration: runner prompts copy the script's usage line and say what to do on an error; a clean `dk all` with
+  a differing image means stale generated files; fix a failure that recurs across reports in the tool, the docs or
+  this skill once.
+
 ## 1.4.0 — 2026-10-14
 
 - Codex and OpenCode get what Claude Code has: session-start state (`templates/codex/hooks.json`, SessionStart hook;

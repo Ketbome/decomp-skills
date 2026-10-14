@@ -8,7 +8,8 @@ instead of tokens, which is the right trade for register-allocation and scheduli
 
 1. Workers save near misses as `nonmatching/<func>.<ext>`: a full copy of the source file with the attempt in place,
    committed, listed in the worklog.
-2. The integrator runs the permuter on them, one at a time with few threads (it compiles constantly).
+2. The integrator runs the permuter on them, one at a time with few threads (it compiles constantly). Its input is
+   the near-miss copy (`nonmatching/<func>.<ext>`), not the real source file, where the function is still asm.
 3. Score 0 is a match: copy the function from `output-0-*/source.c` back into the real file and verify with
    `dk check`. A lower non-zero score is a better starting point for a human or agent.
 
@@ -21,7 +22,8 @@ Per function the permuter needs a directory with:
   (passed to the compiler untouched) and declare every type name the function uses with
   `PERM_PRETEND(typedef int Name;)` (the parser only needs to know it is a type). That makes C++ sources work too
   (structs with constructors, inline methods, references): `compile.sh` compiles the result as C++ inside
-  `extern "C" { }`.
+  `extern "C" { }`. Functions defined in the same file whose bodies are dropped must stay as prototypes, or calls to
+  them become implicit declarations and `base.c` does not compile (`initialization to 'T *' from 'int'`).
 - `compile.sh input.c -o output.o`: the project's real toolchain (compiler, assembly filter, assembler, prelude).
 - `target.o`: the original function assembled from its `.s`.
 - `settings.toml`: `func_name`, `compiler_type = "gcc"`, and `objdump_command` with the right architecture
@@ -40,4 +42,6 @@ matched in four tries.
 ## Limits
 
 - It cannot invent structure (missing locals, a different loop shape): fix those by hand first.
-- Run it when workers are idle or with one or two threads: it competes for CPU and memory with them.
+- Run it when workers are idle or with one or two threads: it competes for CPU and memory with them. Measured in
+  gh3-decomp: a batch at 120 s per function with two threads, beside three workers, got through about 15 of 74 near
+  misses in two hours and closed none; the runs that got close (score 60) had 360 s on an idle machine.

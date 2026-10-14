@@ -97,6 +97,8 @@ in the project's decomp guide and hand the class of functions to mid-size worker
   them, and a report limit (under 200 words, no code). The agent works in the background; the main session waits
   for its report and does not read its transcript.
 - Never two agents on the same files; write the owner and model into STATE.md.
+- A runner does exactly what it is told: copy the command from the script's own usage line (wrong arguments cost a
+  round trip) and say what to do on an error (record it and go on to the next item).
 - Define the three roles once per agent, with the same instructions (`decomp-worker`, `decomp-forensics`,
   `decomp-runner`):
 
@@ -118,7 +120,9 @@ in the project's decomp guide and hand the class of functions to mid-size worker
    for this (`scripts/integrate.sh` in the reference project) makes it one command.
 3. If it fails, find the first function whose address moved (compare symbol addresses of the rebuilt ELF with the
    original), not the first differing byte: the cause is usually a missing padding, a missing data declaration or a
-   function that grew.
+   function that grew. If `dk all` reports every function matching but the image differs (even in size), regenerate
+   first (configure / split): a stale `asm/` or `build/` left by an earlier run made the reference project's
+   image 1760 bytes short, and reconfiguring fixed it.
 4. Update STATE.md and the other documents (table above), commit, then restart the main session if it is a quiet
    point.
 
@@ -137,5 +141,8 @@ in the project's decomp guide and hand the class of functions to mid-size worker
 - A worker you think stopped may still be running (resumed after a rate limit): two writers on one range lose work.
 - Workers "solving" a systematic difference with hacks (inline asm with ordinary instructions, register pins
   everywhere): that is a toolchain question; investigate it yourself.
+- The same failure in several reports (a tool command that fails, workers hand-rolling what a tool should do, the
+  same give-up reason in many worklogs): fix the tool or the docs once, in the project and, when it is not specific
+  to the game, in this skill, instead of working around it in every prompt.
 - A function deleted by accident while editing (a slice replace that swallowed a neighbour): the integration build
   catches it; make the configure step re-add missing `INCLUDE_ASM` lines so the published tree always builds.
