@@ -18,6 +18,10 @@ function's history before you retry it.
 6. Give up after ~15 tries: `dk revert <file> <func>`; keep prototypes other code needs; log the reason.
 7. Commit after each match or few: `dk done <file> docs/worklog/<range>.md "decomp: <file> +N functions"`.
 
+Stop only at the limit your prompt gives (time or matches) or when `dk next <your files> --untried` lists nothing
+you have not tried. Running out of easy candidates is not a reason: raise `--max-size`, take twins, retry give-ups
+whose reason a toolchain fix has removed.
+
 Before stopping, `git status` must show none of your files modified.
 
 ## Never

@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.5.2 — 2026-10-14
+
+- Workers stop only at their limit or when `dk next --untried` is empty (worker.md, agent_protocol template): a
+  whole round stopped early "for lack of viable candidates" with thousands untried.
+
 ## 1.5.1 — 2026-10-14
 
 - `dk twins`: declares every symbol the copied body uses (not only renamed ones), reads one-line structs, forward
