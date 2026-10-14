@@ -1,6 +1,6 @@
 {
   "name": "decomp-skills",
-  "version": "1.5.2",
+  "version": "1.6.0",
   "description": "Agent skills for matching decompilation of games: per-function loop, parallel workers, toolchain forensics, session recovery.",
   "author": {
     "name": "Ketbome"

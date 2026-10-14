@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.0 — 2026-10-14
+
+- The file check (`dk check`, `dk try`, `dk done`) fails when the object lays out functions in another order than
+  the original addresses (e.g. an `__asm__`-aliased definition placed after a later function): each function
+  matched on its own, but the linked image shifted.
+
 ## 1.5.2 — 2026-10-14
 
 - Push only through the integration check, docs and tool commits included (orchestration.md).
