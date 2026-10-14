@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.1 — 2026-10-14
+
+- Toolchain catalogue: SN's assembler fills delay slots only with COP2 instructions, and puts an `mtc1` hazard nop
+  after the next label; the fix for each. Forensics: test the vendor's own assembler; a fix that breaks a matched
+  function that relied on the old behaviour is still worth it (revert that one, keep its C as a near miss).
+
 ## 1.6.0 — 2026-10-14
 
 - The file check (`dk check`, `dk try`, `dk done`) fails when the object lays out functions in another order than
