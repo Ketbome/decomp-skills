@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.5.1 — 2026-10-14
+
+- `dk twins`: declares every symbol the copied body uses (not only renamed ones), reads one-line structs, forward
+  declarations and attributed typedefs, rebinds parameters by cast when the target file already prototypes the
+  function with other types, adapts scalar/array uses of one global, and every skip names what is missing or which
+  declarations conflict (it used to skip silently).
+
 ## 1.5.0 — 2026-10-14
 
 - Toolchain forensics: when no rule can be found (original assembler unavailable, context-dependent pattern), copy
