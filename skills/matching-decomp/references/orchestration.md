@@ -98,7 +98,7 @@ in the project's decomp guide and hand the class of functions to mid-size worker
   for its report and does not read its transcript.
 - Never two agents on the same files; write the owner and model into STATE.md.
 - Give a worker a limit it can count, e.g. "25 matches or 60 functions attempted", not hours: agents do not track
-  time, and with "~3 hours" every gh3-decomp worker stopped after 25-50 minutes.
+  time. In gh3-decomp "~3 hours" got 9-16 matches per worker; the countable limit got 21-25 in the next round.
 - A runner does exactly what it is told: copy the command from the script's own usage line (wrong arguments cost a
   round trip) and say what to do on an error (record it and go on to the next item).
 - Define the three roles once per agent, with the same instructions (`decomp-worker`, `decomp-forensics`,

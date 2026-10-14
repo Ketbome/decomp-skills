@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.3 — 2026-10-14
+
+- Toolchain catalogue: gcc-allocated VU0 registers (`register ... asm("vf1")`, `"j"`) and their `$` spelling;
+  branch-likely choices are C shape, not toolchain. Measured effect of countable worker limits.
+
 ## 1.6.2 — 2026-10-14
 
 - `dk state` no longer crashes when generated blocks are stale (paths joined as strings).

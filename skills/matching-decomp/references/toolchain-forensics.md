@@ -58,6 +58,8 @@ hazard nops, errata workarounds) recur on other consoles.
 | Hazard nop after `mtc1 $fN` placed after the next label (when `$fN` is read right after it), ours before | SN's assembler | filter writes the nop after the label inside `noreorder` |
 | `$s` saved with `sq` in ascending slots, `$ra` with `sd` | the registers hold 128-bit values | source uses a 128-bit type (`mode(TI)`), not a toolchain gap |
 | VU0 instructions in normal functions | inline asm in the original | write them as `asm()` with the `$vfN` registers spelled out |
+| `lqc2`/`sqc2` in branch-likely delay slots or scheduled among ordinary code | gcc allocated the VU0 register (`register TI v asm("vf1")`, constraint `"j"`); an asm is never put in a slot | that source shape; ee-gcc writes `vf1` without `$`, so the filter adds it |
+| Branch-likely vs plain branch with the slot filled | not the toolchain (22 flag variants, five compiler builds agree): reorg's register-liveness view | C shape or permuter |
 
 Open in that project at the time of writing: 26 functions saving `$ra` with `sq`, 58 functions hidden behind 16 bytes
 of `addiu $sp,+X; nop` pairs.
