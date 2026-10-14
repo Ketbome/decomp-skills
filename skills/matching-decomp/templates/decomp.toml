@@ -1,0 +1,34 @@
+# decomp.toml: configuration of dk (decomp kit). Put it at the project root and adapt every value.
+# Paths are relative to the project root. Placeholders in commands: {asm} {stem} {src} {file} {root}.
+
+[target]
+image = "build/original.bin"     # flat image of the original code/data (e.g. objcopy -O binary of the ELF)
+image_vram = 0x80000000          # address of the image's first byte
+endian = "little"                # "big" for N64 and similar
+
+[toolchain]
+# The original compiler (any wrapper: wibo for Windows binaries, docker, a script). Called as: cc cflags filecflags -S src -o asm
+cc = "tools/cc/bin/gcc"
+cflags = "-O2 -G0 -Iinclude"
+file_flags_marker = "// cflags:"            # a source can add flags with this line in its first 10 lines
+# Optional command run on the compiler's assembly before assembling (reproduce the original assembler's quirks).
+asm_filter = ""                             # e.g. "python3 scripts/asm_filter.py {asm} {stem}"
+as = "mips-linux-gnu-as"
+asflags = "-EB -march=vr4300 -mabi=32 -Iinclude"
+asflags_when_cflag = {}                     # e.g. { "-O0" = "-O0" }: extra assembler flags when a file uses a cflag
+as_prelude = ""                             # optional .inc prepended to the assembler input (macros, fixes)
+objdump = "mips-linux-gnu-objdump"
+objdump_arch = "mips"                       # e.g. mips:5900 (PS2), mips:4300 (N64), mips:3000 (PS1)
+m2c = "m2c -t mips-gcc-c {asm}"            # optional: first C draft in `dk show`
+progress = ""                               # optional command printing progress, shown by `dk state`
+
+[layout]
+sources = ["src/**/*.c"]                    # globs of the C/C++ sources holding INCLUDE_ASM lines
+asm_dirs = ["asm/nonmatchings", "asm/matchings"]   # where splat writes one .s per function
+include_asm = "INCLUDE_ASM"
+state = "docs/STATE.md"
+
+[hooks]
+# Commands run on a source file by `dk try`/`dk done` (pre_check) and `dk done` (pre_commit). {file} = the source.
+pre_check = []
+pre_commit = []

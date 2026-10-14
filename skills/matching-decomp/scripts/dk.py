@@ -1,0 +1,498 @@
+#!/usr/bin/env python3
+"""dk: the decomp kit. One tool for the per-function loop and for recovering interrupted sessions in a matching
+decompilation (splat-style layout: one .s per function, C/C++ sources with INCLUDE_ASM lines).
+
+Configured by a `decomp.toml` at the project root (see templates/decomp.toml). Commands:
+
+  dk show <func> [--no-m2c]           original assembly (compact) + an m2c draft + where the function lives
+  dk next <src...> [--max-size N]     functions still in INCLUDE_ASM, smallest first, with flags (jtbl, vu0:N%, ...)
+  dk check <src> <func...> | --all    compile <src> privately and compare functions with the original bytes;
+                                      relocated fields are compared by symbol (+ addend), not by value
+  dk try <src> <func...>              run the configured pre-check hooks on <src>, then `check`
+  dk revert <src> <func...>           put functions back to their INCLUDE_ASM line
+  dk done <src> <worklog> <message>   pre-commit hooks, every function of <src> must match, commit <src> + <worklog>
+  dk all [<src>...]                   check every C/C++ function (regression check after a toolchain change)
+  dk state                            recovery report: uncommitted sources and whether they match, last commits,
+                                      progress, the session state file
+  dk rescue [--commit]                after an interruption: for every modified source, revert the functions that do
+                                      not match (only those that were INCLUDE_ASM at HEAD), then optionally commit
+
+Exit status is 0 only when everything checked matches. Architecture support for relocations: MIPS (PS1, PS2, N64,
+PSP). Requires Python 3.9+, pyelftools, and tomllib (3.11+) or tomli.
+"""
+
+import fnmatch
+import glob
+import os
+import re
+import shlex
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
+
+try:
+    import tomllib
+except ImportError:  # Python < 3.11
+    try:
+        import tomli as tomllib
+    except ImportError:
+        sys.exit("dk: needs Python 3.11+ or `pip install tomli`")
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# configuration
+
+def find_root():
+    here = Path.cwd().resolve()
+    for d in [here, *here.parents]:
+        if (d / "decomp.toml").exists():
+            return d
+    sys.exit("dk: no decomp.toml in this directory or above (copy templates/decomp.toml to the project root)")
+
+
+ROOT = find_root()
+CFG = tomllib.loads((ROOT / "decomp.toml").read_text())
+T, TC, L = CFG.get("target", {}), CFG.get("toolchain", {}), CFG.get("layout", {})
+HOOKS = CFG.get("hooks", {})
+
+
+def cfg_path(value):
+    return ROOT / value if value else None
+
+
+IMAGE = cfg_path(T.get("image"))
+IMAGE_VRAM = int(str(T.get("image_vram", 0)), 0)
+ASM_DIRS = [cfg_path(d) for d in L.get("asm_dirs", ["asm/nonmatchings", "asm/matchings"])]
+SOURCES = L.get("sources", ["src/**/*.c", "src/**/*.cpp"])
+INCLUDE_ASM = L.get("include_asm", "INCLUDE_ASM")
+STATE = cfg_path(L.get("state", "docs/STATE.md"))
+FLAG_MARKER = TC.get("file_flags_marker", "// cflags:")
+
+
+def sh(cmd, **kw):
+    """Run a command line (string, shell-split) from the project root."""
+    return subprocess.run(cmd if isinstance(cmd, list) else shlex.split(cmd), cwd=ROOT, **kw)
+
+
+def source_files():
+    out = []
+    for pattern in SOURCES:
+        out += [Path(p) for p in glob.glob(str(ROOT / pattern), recursive=True)]
+    return sorted(set(out))
+
+
+def rel(p):
+    try:
+        return str(Path(p).resolve().relative_to(ROOT))
+    except ValueError:
+        return str(p)
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# original functions (per-function .s files)
+
+ADDR_RE = re.compile(r"^\s+/\* [0-9A-Fa-f]+ ([0-9A-Fa-f]{8}) ([0-9A-Fa-f]{8}) \*/(\s+)(\S+)[ \t]*(.*)$", re.M)
+SYM_RE = re.compile(r"%(hi|lo|gp_rel)\(([\w.$]+)(?:\s*\+\s*(0x[0-9A-Fa-f]+|\d+))?\)")
+
+
+def find_asm(name):
+    for d in ASM_DIRS:
+        if d and d.exists():
+            hit = next(d.rglob(f"{name}.s"), None)
+            if hit:
+                return hit
+    return None
+
+
+def parse_asm(path):
+    """(start address, size, [(offset, mnemonic, operands, in_delay_slot)], {offset: (kind, symbol, addend)})."""
+    text = path.read_text()
+    insns = [(int(m.group(1), 16), m.group(4), m.group(5).strip(), len(m.group(3)) > 2) for m in ADDR_RE.finditer(text)]
+    if not insns:
+        sys.exit(f"dk: {path} has no instructions")
+    start = insns[0][0]
+    m = re.search(r"^nonmatching \S+, 0x([0-9A-Fa-f]+)", text, re.M)
+    if m:
+        size = int(m.group(1), 16)
+    else:
+        end = text.find("endlabel")
+        body = [i for i in insns if end < 0 or text.find(f"{i[0]:08X}") < end]
+        size = body[-1][0] + 4 - start
+    refs = {}
+    for addr, op, args, _ in insns:
+        off = addr - start
+        if op in ("jal", "j") and re.match(r"^[A-Za-z_][\w.$]*$", args):
+            refs[off] = ("26", args, 0)
+            continue
+        s = SYM_RE.search(args)
+        if s:
+            refs[off] = (s.group(1), s.group(2), int(s.group(3) or "0", 0))
+    return start, size, insns, refs
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# compiling one source file privately
+
+def file_flags(src):
+    for line in Path(src).read_text().splitlines()[:10]:
+        if line.startswith(FLAG_MARKER):
+            return line[len(FLAG_MARKER):].strip()
+    return ""
+
+
+def compile_object(src, tmp):
+    src = Path(src).resolve()
+    asm, obj = tmp / "out.s", tmp / "out.o"
+    stem = src.name.split(".")[0]
+    extra = file_flags(src)
+    cc = TC["cc"].format(root=ROOT)
+    r = sh(shlex.split(cc) + shlex.split(TC.get("cflags", "")) + shlex.split(extra) + ["-S", str(src), "-o", str(asm)],
+           capture_output=True, text=True)
+    if r.returncode:
+        raise RuntimeError((r.stderr or r.stdout)[-3000:])
+    if TC.get("asm_filter"):
+        sh(TC["asm_filter"].format(asm=asm, stem=stem, src=src, root=ROOT), check=True)
+    asflags = shlex.split(TC.get("asflags", ""))
+    for flag, add in TC.get("asflags_when_cflag", {}).items():
+        if flag in extra.split():
+            asflags += shlex.split(add)
+    prelude = [TC["as_prelude"]] if TC.get("as_prelude") else []
+    r = sh([TC["as"]] + asflags + prelude + [str(asm), "-o", str(obj)], capture_output=True, text=True)
+    if r.returncode:
+        raise RuntimeError((r.stderr or r.stdout)[-3000:])
+    return obj
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# comparing
+
+R_MIPS = {4: ("26", 0x03FFFFFF), 5: ("hi", 0xFFFF), 6: ("lo", 0xFFFF), 7: ("gp_rel", 0xFFFF)}
+ALLOWED_SECTIONS = {".text", ".reginfo", ".mdebug.eabi64", ".mdebug.abi32", ".comment", ".symtab", ".strtab",
+                    ".shstrtab", ".pdr", ".gnu.attributes", ".MIPS.abiflags", ".note.GNU-stack"}
+
+
+def object_function(obj, name):
+    from elftools.elf.elffile import ELFFile
+    from elftools.elf.relocation import RelocationSection
+    elf = ELFFile(open(obj, "rb"))
+    sym = next((s for s in elf.get_section_by_name(".symtab").iter_symbols()
+                if s.name == name and s["st_info"]["type"] == "STT_FUNC"), None)
+    if sym is None:
+        return None, None
+    index = sym["st_shndx"]
+    lo, size = sym["st_value"], sym["st_size"]
+    data = elf.get_section(index).data()[lo:lo + size]
+    refs = {}
+    for sec in elf.iter_sections():
+        if not isinstance(sec, RelocationSection) or sec["sh_info"] != index:
+            continue
+        syms = elf.get_section(sec["sh_link"])
+        for r in sec.iter_relocations():
+            off = r["r_offset"] - lo
+            if not 0 <= off < size:
+                continue
+            kind, mask = R_MIPS.get(r["r_info_type"], (str(r["r_info_type"]), 0))
+            word = int.from_bytes(data[off:off + 4], "little")
+            addend = (word & 0xFFFF) - ((word & 0x8000) << 1) if kind in ("lo", "gp_rel") else 0
+            target = syms.get_symbol(r["r_info_sym"])
+            refs[off] = (kind, target.name or f"<section {target['st_shndx']}>", addend, mask)
+    return data, refs
+
+
+def stray_data(obj):
+    from elftools.elf.elffile import ELFFile
+    elf = ELFFile(open(obj, "rb"))
+    return [f"{s.name} ({s['sh_size']:#x})" for s in elf.iter_sections()
+            if s.name not in ALLOWED_SECTIONS and not s.name.startswith(".rel") and s["sh_type"] != "SHT_NULL"
+            and s["sh_size"]]
+
+
+def disasm(addr, data):
+    with tempfile.NamedTemporaryFile(suffix=".bin") as f:
+        f.write(data)
+        f.flush()
+        out = subprocess.run([TC["objdump"], "-D", "-z", "-b", "binary", "-m", TC.get("objdump_arch", "mips"),
+                              "-EL" if T.get("endian", "little") == "little" else "-EB",
+                              f"--adjust-vma={addr:#x}", f.name], capture_output=True, text=True).stdout
+    return [line.split("\t", 2)[-1].strip() for line in out.splitlines() if re.match(r"^\s+[0-9a-f]+:\t", line)]
+
+
+def check_function(obj, name, image):
+    path = find_asm(name)
+    if not path:
+        return f"{name}: no original .s"
+    start, size, _, orig_refs = parse_asm(path)
+    data, refs = object_function(obj, name)
+    if data is None:
+        return f"{name}: not defined in the object (name, linkage?)"
+    orig = image[start - IMAGE_VRAM:start - IMAGE_VRAM + size]
+    problems = []
+    if len(data) != len(orig):
+        problems.append(f"size {len(data):#x}, original {len(orig):#x}")
+    mine, theirs = disasm(start, data), disasm(start, orig)
+    for off in range(0, min(len(data), len(orig)), 4):
+        a = int.from_bytes(data[off:off + 4], "little")
+        b = int.from_bytes(orig[off:off + 4], "little")
+        mask = refs[off][3] if off in refs else 0
+        bad = (a & ~mask) != (b & ~mask)
+        if off in refs and not bad:
+            kind, sym, addend, _ = refs[off]
+            want = orig_refs.get(off)
+            bad = want is None or want[1] != sym or (kind != "hi" and want[2] != addend)
+        elif off not in refs and off in orig_refs:
+            bad = True
+        if bad:
+            i = off // 4
+            note = f" [{refs[off][1]}]" if off in refs else ""
+            onote = f" [{orig_refs[off][1]}]" if off in orig_refs else ""
+            problems.append(f"  {start + off:08X}: {(mine[i] if i < len(mine) else '?') + note:46} | original: "
+                            f"{(theirs[i] if i < len(theirs) else '?')}{onote}")
+    return f"{name}: MATCH" if not problems else f"{name}: DIFFERS\n" + "\n".join(problems[:40])
+
+
+def defined_functions(src):
+    """Functions written in C/C++ in a source file (definitions in column 0 that have an original .s)."""
+    text = Path(src).read_text()
+    names = re.findall(rf"^(?!\s)(?!{INCLUDE_ASM})(?!#).*?\b(\w+)\s*\([^;{{]*\)\s*(?:const\s*)?\{{", text, re.M)
+    return [n for n in dict.fromkeys(names) if find_asm(n)]
+
+
+def run_check(src, names, quiet=False):
+    image = IMAGE.read_bytes()
+    with tempfile.TemporaryDirectory() as tmp:
+        try:
+            obj = compile_object(src, Path(tmp))
+        except RuntimeError as e:
+            print(f"{rel(src)}: does not compile\n{e}")
+            return False, [], []
+        results = [check_function(obj, n, image) for n in names]
+        stray = stray_data(obj)
+    if stray:
+        results.append("FILE: the object has data of its own (would shift the game's data): " + ", ".join(stray))
+    if not quiet:
+        print("\n".join(results))
+    ok = [r.split(":")[0] for r in results if r.endswith(": MATCH")]
+    bad = [r.split(":")[0] for r in results if not r.endswith(": MATCH")]
+    return not bad, ok, bad
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# editing sources
+
+def include_line(src, name):
+    folder = None
+    text = Path(src).read_text()
+    m = re.search(rf'^{INCLUDE_ASM}\("([^"]+)",', text, re.M)
+    if m:
+        folder = m.group(1)
+    else:
+        path = find_asm(name)
+        folder = rel(path.parent).replace("/matchings/", "/nonmatchings/")
+    return f'{INCLUDE_ASM}("{folder}", {name});'
+
+
+def revert(src, names):
+    lines = Path(src).read_text().splitlines(keepends=True)
+    done = []
+    for name in names:
+        start = next((i for i, line in enumerate(lines)
+                      if re.match(rf"^(?!\s)(?!{INCLUDE_ASM}).*\b{name}\s*\([^;]*$", line)
+                      and "{" in "".join(lines[i:i + 3])), None)
+        if start is None:
+            continue
+        end = next(i for i in range(start, len(lines)) if lines[i].startswith("}"))
+        lines[start:end + 1] = [include_line(src, name) + "\n"]
+        done.append(name)
+    Path(src).write_text("".join(lines))
+    return done
+
+
+def run_hooks(kind, src):
+    for cmd in HOOKS.get(kind, []):
+        sh(cmd.format(file=rel(src), root=ROOT), capture_output=True)
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# git
+
+def git(*args, check=False):
+    return subprocess.run(["git", *args], cwd=ROOT, capture_output=True, text=True, check=check)
+
+
+def modified_sources():
+    out = git("status", "--porcelain").stdout.splitlines()
+    files = [line[3:] for line in out if line[:2].strip() in ("M", "MM", "AM", "A")]
+    pats = SOURCES
+    return [ROOT / f for f in files if any(fnmatch.fnmatch(f, p.replace("**/", "*")) or fnmatch.fnmatch(f, p) for p in pats)]
+
+
+def commit(paths, message):
+    for _ in range(8):
+        r = git("add", *[rel(p) for p in paths])
+        if r.returncode == 0:
+            r = git("commit", "-q", "-m", message)
+            if r.returncode == 0:
+                return git("log", "--oneline", "-1").stdout.strip()
+        if "index.lock" not in (r.stderr or ""):
+            break
+        import time
+        time.sleep(3)
+    return None
+
+
+# --------------------------------------------------------------------------------------------------------------------
+# commands
+
+def cmd_show(args):
+    name = args[0]
+    path = find_asm(name)
+    if not path:
+        sys.exit(f"{name}: no .s in {', '.join(rel(d) for d in ASM_DIRS)}")
+    srcs = [s for s in source_files() if re.search(rf"\b{name}\b", s.read_text())]
+    print(f"function {name}   asm {rel(path)}   source {', '.join(rel(s) for s in srcs) or '?'}")
+    for line in path.read_text().splitlines():
+        m = ADDR_RE.match(line + "\n") if line.strip().startswith("/*") else None
+        if m:
+            print(f"{m.group(1)}{' ' if len(m.group(3)) > 2 else ''} {m.group(4):10} {m.group(5).strip()}")
+        elif re.match(r"^\s+(\.L\w+:|jlabel|alabel)", line):
+            print("  " + line.strip())
+    if "--no-m2c" not in args and TC.get("m2c"):
+        r = sh(TC["m2c"].format(asm=path, root=ROOT), capture_output=True, text=True)
+        print("--- m2c ---")
+        print((r.stdout or r.stderr).strip()[:6000])
+
+
+def cmd_next(args):
+    max_size = 1 << 32
+    if "--max-size" in args:
+        k = args.index("--max-size")
+        max_size = int(args[k + 1], 0)
+        args = args[:k] + args[k + 2:]
+    files = [Path(a) for a in args] or source_files()
+    rows = []
+    for src in files:
+        for folder, name in re.findall(rf'^{INCLUDE_ASM}\("([^"]+)",\s*(\w+)\);', Path(src).read_text(), re.M):
+            path = ROOT / folder / f"{name}.s"
+            if not path.exists():
+                path = find_asm(name)
+                if not path:
+                    continue
+            start, size, insns, _ = parse_asm(path)
+            if size > max_size:
+                continue
+            text = path.read_text()
+            flags = []
+            if "jtbl_" in text:
+                flags.append("jtbl")
+            vu = sum(1 for _, op, _, _ in insns if re.match(r"^(v[a-z]+(\.\w+)?|vcallms\w*|qm[tf]c2\S*|lqc2|sqc2)$", op))
+            if vu:
+                flags.append(f"vu0:{100 * vu // len(insns)}%")
+            if insns[0][1] in ("sqc2", "lqc2") or (insns[0][1] == "addiu" and re.match(r"\$(29|sp), \$(29|sp), 0x", insns[0][2])):
+                flags.append("fragment?")
+            rows.append((size, name, rel(src), ",".join(flags)))
+    for size, name, src, flags in sorted(rows):
+        print(f"{size:#7x}  {name:28} {src}  {flags}")
+
+
+def cmd_check(args):
+    src = Path(args[0])
+    names = defined_functions(src) if args[1:] == ["--all"] else args[1:]
+    ok, _, _ = run_check(src, names)
+    sys.exit(0 if ok else 1)
+
+
+def cmd_try(args):
+    run_hooks("pre_check", Path(args[0]))
+    cmd_check(args)
+
+
+def cmd_revert(args):
+    for name in revert(Path(args[0]), args[1:]):
+        print(f"{name}: reverted")
+
+
+def cmd_done(args):
+    src, log, message = Path(args[0]), Path(args[1]), args[2]
+    run_hooks("pre_check", src)
+    run_hooks("pre_commit", src)
+    ok, good, bad = run_check(src, defined_functions(src), quiet=True)
+    if not ok:
+        print("NOT COMMITTED: does not match or does not compile: " + " ".join(bad))
+        sys.exit(1)
+    print(f"{len(good)} functions match")
+    line = commit([src, log] if log.exists() else [src], message)
+    print(line or "commit failed")
+    sys.exit(0 if line else 1)
+
+
+def cmd_all(args):
+    files = [Path(a) for a in args] or source_files()
+    total_ok, total_bad, broken = 0, [], []
+    for src in files:
+        names = defined_functions(src)
+        if not names:
+            continue
+        ok, good, bad = run_check(src, names, quiet=True)
+        total_ok += len(good)
+        if bad and not good and len(bad) == 1 and bad[0].startswith(rel(src)):
+            broken.append(rel(src))
+        total_bad += bad
+    print(f"match {total_ok}, differ {len(total_bad)}" + (f": {' '.join(total_bad)}" if total_bad else ""))
+    sys.exit(0 if not total_bad else 1)
+
+
+def cmd_state(args):
+    print("== session state (" + rel(STATE) + ")")
+    print(STATE.read_text().strip() if STATE and STATE.exists() else "(none: write one, see references/recovery.md)")
+    print("\n== last commits")
+    print(git("log", "--oneline", "-8").stdout.strip())
+    unpushed = git("log", "--oneline", "@{u}..HEAD").stdout.strip()
+    print(f"\n== not pushed: {len(unpushed.splitlines()) if unpushed else 0} commits")
+    print("\n== uncommitted sources")
+    mods = modified_sources()
+    if not mods:
+        print("none")
+    for src in mods:
+        names = defined_functions(src)
+        ok, good, bad = run_check(src, names, quiet=True)
+        print(f"{rel(src)}: {len(good)} match" + (f", differ: {' '.join(bad)}" if bad else ""))
+    if TC.get("progress"):
+        print("\n== progress")
+        print(sh(TC["progress"], capture_output=True, text=True).stdout.strip())
+
+
+def cmd_rescue(args):
+    mods = modified_sources()
+    rescued = []
+    for src in mods:
+        run_hooks("pre_check", src)
+        names = defined_functions(src)
+        ok, good, bad = run_check(src, names, quiet=True)
+        head = git("show", f"HEAD:{rel(src)}").stdout
+        to_revert = [n for n in bad if re.search(rf"{INCLUDE_ASM}\([^)]*\b{n}\);", head)]
+        lost = [n for n in bad if n not in to_revert]
+        if to_revert:
+            revert(src, to_revert)
+        ok2, good2, bad2 = run_check(src, defined_functions(src), quiet=True)
+        print(f"{rel(src)}: reverted {len(to_revert)} work-in-progress function(s); {len(good2)} match"
+              + (f"; STILL DIFFERS (was C++ at HEAD, investigate): {' '.join(bad2)}" if bad2 else ""))
+        if ok2:
+            run_hooks("pre_commit", src)
+            rescued.append(src)
+    if "--commit" in args and rescued:
+        print(commit(rescued, "decomp: rescue work in progress after an interruption") or "commit failed")
+
+
+COMMANDS = {"show": cmd_show, "next": cmd_next, "check": cmd_check, "try": cmd_try, "revert": cmd_revert,
+            "done": cmd_done, "all": cmd_all, "state": cmd_state, "rescue": cmd_rescue}
+
+
+def main():
+    if len(sys.argv) < 2 or sys.argv[1] not in COMMANDS:
+        sys.exit(__doc__)
+    COMMANDS[sys.argv[1]](sys.argv[2:])
+
+
+if __name__ == "__main__":
+    main()

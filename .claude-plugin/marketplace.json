@@ -1,0 +1,14 @@
+{
+  "name": "decomp-skills",
+  "description": "Agent skills for matching decompilation of video games (PS1, PS2, N64, PSP and more).",
+  "owner": {
+    "name": "Ketbome"
+  },
+  "plugins": [
+    {
+      "name": "decomp-skills",
+      "source": "./",
+      "description": "Agent skills for matching decompilation of games: per-function loop, parallel workers, toolchain forensics, session recovery."
+    }
+  ]
+}

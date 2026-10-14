@@ -1,0 +1,31 @@
+# decomp-skills
+
+> Agent skills (open Agent Skills format, SKILL.md) for matching decompilation of video games: rewriting game code as
+> C/C++ that recompiles to the exact original bytes. Includes a method for agents, a tool (dk) for the per-function
+> loop and for recovering interrupted sessions, orchestration of parallel worker agents, and toolchain forensics
+> (with a catalogue for SN Systems ee-gcc on PS2). Installs into Claude Code, OpenCode, Codex CLI, Gemini CLI,
+> Cursor and GitHub Copilot.
+
+## Skill
+
+- [SKILL.md](skills/matching-decomp/SKILL.md): entry point
+- [Recovery](skills/matching-decomp/references/recovery.md): resume after crashes, rate limits, lost context
+- [Setup](skills/matching-decomp/references/setup.md): start a project (splat, byte-identical rebuild, compiler identification)
+- [Worker loop](skills/matching-decomp/references/worker.md): decompile one function at a time
+- [Orchestration](skills/matching-decomp/references/orchestration.md): parallel worker agents and integration
+- [Toolchain forensics](skills/matching-decomp/references/toolchain-forensics.md): systematic differences, PS2 SN ee-gcc catalogue
+- [Matching techniques](skills/matching-decomp/references/matching.md)
+- [Permuter](skills/matching-decomp/references/permuter.md): near misses with decomp-permuter
+
+## Tool and templates
+
+- [dk.py](skills/matching-decomp/scripts/dk.py): show, next, check, try, revert, done, all, state, rescue
+- [decomp.toml](skills/matching-decomp/templates/decomp.toml), [STATE.md](skills/matching-decomp/templates/STATE.md), [agent_protocol.md](skills/matching-decomp/templates/agent_protocol.md), [worklog.md](skills/matching-decomp/templates/worklog.md)
+
+## Install
+
+- [README](README.md): install for every agent; `install.sh --all`; Claude Code plugin marketplace `Ketbome/decomp-skills`
+
+## Reference project
+
+- [gh3-decomp](https://github.com/Ketbome/gh3-decomp): Guitar Hero III (PS2) matching decomp built with this method
