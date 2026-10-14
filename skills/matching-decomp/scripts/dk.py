@@ -12,6 +12,8 @@ Configured by a `decomp.toml` at the project root (see templates/decomp.toml). C
   dk revert <src> <func...>           put functions back to their INCLUDE_ASM line
   dk done <src> <worklog> <message>   pre-commit hooks, every function of <src> must match, commit <src> + <worklog>
   dk all [<src>...]                   check every C/C++ function (regression check after a toolchain change)
+  dk twins [--list] [<src>...]        copy matched functions onto functions with identical assembly (symbols renamed,
+                                      local types copied), keep only what matches
   dk state                            recovery report: uncommitted sources and whether they match, last commits,
                                       progress, the session state file
   dk rescue [--commit]                after an interruption: for every modified source, revert the functions that do
@@ -484,8 +486,152 @@ def cmd_rescue(args):
         print(commit(rescued, "decomp: rescue work in progress after an interruption") or "commit failed")
 
 
+def asm_signature(path):
+    """(instructions with labels made relative and symbols abstracted, symbols in order of appearance)."""
+    _, _, insns, _ = parse_asm(path)
+    base = insns[0][0]
+    norm, syms = [], []
+    for _, op, args, _ in insns:
+        args = re.sub(r"\.L([0-9A-Fa-f]{8})", lambda m: f"L{int(m.group(1), 16) - base:x}", args)
+        if op in ("jal", "j") and re.match(r"^[A-Za-z_][\w.$]*$", args):
+            syms.append(args)
+            args = "SYM"
+        else:
+            def sub(m):
+                syms.append(m.group(2))
+                return f"%{m.group(1)}(SYM"
+            args = re.sub(r"%(hi|lo|gp_rel)\(([\w.$]+)", sub, args)
+        norm.append(f"{op} {args}")
+    return tuple(norm), syms
+
+
+def function_text(text, name):
+    lines = text.splitlines(keepends=True)
+    for i, line in enumerate(lines):
+        if re.match(rf"^(?!\s)(?!{INCLUDE_ASM}).*\b{re.escape(name)}\s*\([^;]*$", line) and "{" in "".join(lines[i:i + 3]):
+            j = i
+            while not lines[j].startswith("}"):
+                j += 1
+            return "".join(lines[i:j + 1])
+    return None
+
+
+def local_type_names(text):
+    return set(re.findall(r"^(?:struct|union|class)\s+(\w+)\s*[:{]", text, re.M)) | \
+        set(re.findall(r"^typedef\b[^;]*?\b(\w+)\s*;", text, re.M))
+
+
+def type_definition(text, name):
+    lines = text.splitlines(keepends=True)
+    for i, line in enumerate(lines):
+        if re.match(rf"^(?:struct|union|class)\s+{name}\b[^;]*$", line):
+            j, depth = i, 0
+            while True:
+                depth += lines[j].count("{") - lines[j].count("}")
+                if depth <= 0 and "}" in lines[j]:
+                    return "".join(lines[i:j + 1])
+                j += 1
+        if re.match(rf"^typedef\b[^;]*\b{name}\s*;", line):
+            return line
+    return None
+
+
+def cmd_twins(args):
+    listing = "--list" in args
+    only = {Path(a).resolve() for a in args if a != "--list"}
+    srcs = source_files()
+    texts = {s: s.read_text() for s in srcs}
+    owner, pending, written = {}, set(), set()
+    for s, t in texts.items():
+        for n in re.findall(rf'^{INCLUDE_ASM}\("[^"]+",\s*(\w+)\);', t, re.M):
+            pending.add(n)
+            owner[n] = s
+        for n in re.findall(r"^(?!\s)(?!#).*?\b(\w+)\s*\([^;{]*\)\s*(?:const\s*)?\{", t, re.M):
+            written.add(n)
+            owner.setdefault(n, s)
+    groups = {}
+    for name in pending | written:
+        path = find_asm(name)
+        if not path:
+            continue
+        key, syms = asm_signature(path)
+        if len(key) >= 4:
+            groups.setdefault(key, []).append((name, syms))
+    total = ok = 0
+    for members in groups.values():
+        done = [m for m in members if m[0] in written and m[0] not in pending]
+        for name, syms in members:
+            if name not in pending or not done or (only and owner[name].resolve() not in only):
+                continue
+            src = owner[name]
+            twin, tsyms = next(((n, s) for n, s in done if owner[n] == src), done[0])
+            if len(tsyms) != len(syms):
+                continue
+            mapping = {twin: name}
+            for a, b in zip(tsyms, syms):
+                if a != b and mapping.setdefault(a, b) != b:
+                    mapping = None
+                    break
+            if not mapping:
+                continue
+            total += 1
+            if listing:
+                print(f"{rel(src)}: {name} <- {twin} ({rel(owner[twin])})")
+                continue
+            text, ttext = src.read_text(), owner[twin].read_text()
+            body = function_text(ttext, twin)
+            line = re.search(rf'^{INCLUDE_ASM}\("[^"]+",\s*{name}\);\n', text, re.M)
+            if not body or not line:
+                continue
+            types, have, theirs = [], local_type_names(text), local_type_names(ttext)
+            try:
+                seen = set()
+
+                def visit(chunk):
+                    for w in dict.fromkeys(re.findall(r"\w+", chunk)):
+                        if w in theirs and w not in have and w not in seen:
+                            seen.add(w)
+                            block = type_definition(ttext, w)
+                            if block is None:
+                                raise KeyError(w)
+                            visit(block)
+                            types.append(block)
+                if owner[twin] != src:
+                    visit(body)
+            except KeyError:
+                continue
+            for a, b in mapping.items():
+                body = re.sub(rf"\b{re.escape(a)}\b", b, body)
+            decls = []
+            for a, b in mapping.items():
+                if a == twin or re.search(rf"\b{re.escape(b)}\b", text):
+                    continue
+                d = re.search(rf"^[^\n]*\b{re.escape(a)}\b[^\n]*;[^\n]*$", ttext, re.M)
+                if d:
+                    decls.append(re.sub(rf"\b{re.escape(a)}\b", b, d.group(0).strip()) + "\n")
+            new = text[:line.start()] + "".join(t + "\n" for t in types) + body + text[line.end():]
+            if decls:
+                m = re.search(r'^extern "C" \{\n', new, re.M)
+                if m:
+                    new = new[:m.end()] + "".join(decls) + new[m.end():]
+                else:
+                    inc = list(re.finditer(r"^#include[^\n]*\n", new, re.M))
+                    at = inc[-1].end() if inc else 0
+                    new = new[:at] + "".join(decls) + new[at:]
+            src.write_text(new)
+            run_hooks("pre_check", src)
+            good, _, _ = run_check(src, [name], quiet=True)
+            if good:
+                ok += 1
+                print(f"{rel(src)}: {name} MATCH (from {twin})")
+            else:
+                src.write_text(text)
+                print(f"{rel(src)}: {name} no match (from {twin})")
+    print(f"{total} candidates" if listing else f"{ok} of {total} twins matched")
+
+
 COMMANDS = {"show": cmd_show, "next": cmd_next, "check": cmd_check, "try": cmd_try, "revert": cmd_revert,
-            "done": cmd_done, "all": cmd_all, "state": cmd_state, "rescue": cmd_rescue}
+            "done": cmd_done, "all": cmd_all, "twins": cmd_twins, "state": cmd_state, "rescue": cmd_rescue}
 
 
 def main():

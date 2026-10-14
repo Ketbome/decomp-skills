@@ -37,6 +37,7 @@ dk try <src> <func>            pre-check hooks, then compare that function with 
 dk revert <src> <func>         back to INCLUDE_ASM
 dk done <src> <log> <msg>      refuse unless every function of <src> matches, then commit <src> + <log>
 dk all                         check every written function (after any toolchain change)
+dk twins [--list]              copy matched functions onto identical ones (one match -> many)
 dk state                       recovery report: STATE.md, uncommitted sources and whether they match, commits
 dk rescue [--commit]           revert work-in-progress that does not match, keep and commit the rest
 ```

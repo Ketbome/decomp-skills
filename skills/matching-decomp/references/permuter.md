@@ -30,6 +30,13 @@ Per function the permuter needs a directory with:
 `scripts/permute.py` in [Ketbome/gh3-decomp](https://github.com/Ketbome/gh3-decomp) builds all of that from a source
 file and a function name and runs the permuter; adapt it to your toolchain variables.
 
+## Finishing a near miss
+
+The permuter's best output is often a few instructions away. Combine it with the cheap manual levers: a callee
+re-declared to return `int` through an alias (`extern "C" int f_i(...) __asm__("f");`), a copy of a value into a
+new local, a comparison moved into a tiny inline function. In gh3-decomp a score-10 output plus the `int` alias
+matched in four tries.
+
 ## Limits
 
 - It cannot invent structure (missing locals, a different loop shape): fix those by hand first.

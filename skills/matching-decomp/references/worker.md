@@ -19,7 +19,10 @@ Read it and the project's decomp guide before starting.
    permuter will search for you (permuter.md).
 6. **Give up** after ~15 attempts: `dk revert <file> <func>`, keep any prototype other code in the file still needs,
    log the function with one line on why.
-7. **Commit** after each match or few: `dk done <file> docs/worklog/<range>.md "decomp: <file> +N functions"`. It
+7. **Twins** — `dk twins <your files>` copies every matched function onto functions with identical assembly
+   (renaming symbols, copying local types) and keeps what matches. Run it after matching anything; when choosing
+   what to work on, prefer a function that has identical siblings (`dk twins --list`).
+8. **Commit** after each match or few: `dk done <file> docs/worklog/<range>.md "decomp: <file> +N functions"`. It
    refuses to commit unless every function of the file matches and the file compiles.
 
 Before stopping: `git status` shows none of your files modified; your final report lists matched count and bytes,

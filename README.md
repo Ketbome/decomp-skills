@@ -23,6 +23,7 @@ limits, crashes and lost sessions — without losing work.
   | `dk try` / `dk revert` | pre-check hooks + check / back to `INCLUDE_ASM` |
   | `dk done <src> <log> <msg>` | refuses to commit unless every function of the file matches |
   | `dk all` | checks every written function (run after any toolchain change) |
+  | `dk twins` | copies matched functions onto functions with identical assembly: one match yields many |
   | `dk state` | **recovery report**: session state file, uncommitted sources and whether they match, unpushed commits, progress |
   | `dk rescue [--commit]` | **after an interruption**: reverts work in progress that does not match, keeps and commits the rest |
 
