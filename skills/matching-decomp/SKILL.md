@@ -21,6 +21,7 @@ This skill provides the method, a tool (`scripts/dk.py`, "decomp kit") and templ
 | Starting a new project (split the binary, find the compiler, first match) | [references/setup.md](references/setup.md) |
 | Decompiling functions yourself, or as a worker agent | [references/worker.md](references/worker.md) |
 | Running several worker agents in parallel and integrating their work | [references/orchestration.md](references/orchestration.md) |
+| Which model / effort for a task, when to escalate, how to launch subagents | [references/orchestration.md](references/orchestration.md) ("Choosing models and effort") |
 | Being the main session: stay fresh, keep README/AGENTS.md/STATE.md current | [references/orchestration.md](references/orchestration.md) (first two sections) |
 | A function "should" match but the bytes differ in a systematic way | [references/toolchain-forensics.md](references/toolchain-forensics.md) |
 | Techniques to steer the compiler (registers, order, branches, loops) | [references/matching.md](references/matching.md) |
@@ -69,7 +70,8 @@ linking. The full build (`ninja` or whatever the project uses) stays the final w
 6. **Fix the toolchain, not the function.** When many functions fail the same way, the cause is almost always a
    compiler flag or an assembler behaviour (see toolchain-forensics). One fix there unblocks hundreds of functions;
    check every fix against all matched functions (`dk all`) before committing it.
-7. **Spend tokens where they pay.** Cheap model for the per-function loop, strong model for toolchain forensics;
-   near misses go to the permuter (CPU), not to fifteen more manual attempts.
+7. **Spend tokens where they pay.** Mid-size model for the per-function loop, small model for mechanical runs,
+   strong model with high effort for toolchain forensics (table and escalation rules: orchestration.md, "Choosing
+   models and effort"); near misses go to the permuter (CPU), not to fifteen more manual attempts.
 8. **Clean room.** Names and types come from the binary, the game's own data and your analysis; never from leaked
    or copyrighted source code. Never commit game data (ISO, extracted files, generated asm).

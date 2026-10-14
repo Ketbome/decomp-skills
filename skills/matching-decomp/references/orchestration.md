@@ -56,14 +56,50 @@ Every integration round, before restarting:
   toolchain fix just unblocked (retry its give-ups first); then mid-size functions nobody tried; then special
   classes (switch tables, vector code, unoptimised objects).
 
-## Resources and models
+## Resources
 
 - Workers are independent processes that each compile code: on a 16 GB machine, three at a time is a safe ceiling;
   build with limited parallelism (`ninja -j4`). One compile/check at a time per worker.
-- A mid-size model handles the per-function loop at the same rate as a large one; use the large one for toolchain
-  forensics, mixed vector/assembly code, and when a worker reports a systematic blocker.
 - When the per-round yield drops (few matches per hundred tried), change the focus or fix the toolchain: do not just
   relaunch the same worker.
+
+## Choosing models and effort
+
+The main session (a strong model) decides and integrates; it delegates every task that reads code or runs long.
+Pick the cheapest model that does the task at full yield, and escalate only on evidence.
+
+| Task | Model | Effort | Why |
+|---|---|---|---|
+| Per-function loop (worker, a range of files) | mid-size (Sonnet) | default | matches as many functions per hour as a large model, at a fraction of the cost |
+| Mechanical runs: permuter batch + apply, `dk twins`, applying a names list, a census (`grep`/`dk next` counts), docs from given facts | small (Haiku) | low | follows commands, reports numbers; no judgement involved |
+| Surveys of code or asm ("which functions share this shape?", classify fragments) | small or mid (Explore agent) | default | reads a lot, returns a short list; keeps that reading out of the main session |
+| Toolchain forensics: a difference repeated across many functions, assembler/compiler behaviour, flags | strong (Opus) | high / max | one hypothesis-and-experiment chain that unblocks hundreds of functions; worth the tokens |
+| Hard single functions with high value (large, many twins or callers) after a mid worker and the permuter failed | strong | high | bounded: one attempt of ~20 tries, then back to the give-up list |
+| Integration failure (build not identical, an address moved) | main session or strong | default | needs the whole picture; rare |
+| Orchestration, plans, skill and doc updates | main session | default | judgement, few tokens if it reads little |
+
+Escalate when:
+- two or more workers (or one worker on three or more functions) report the same difference: open a strong-model
+  forensics task, with no worker editing the files it experiments on (it works in a scratch copy);
+- a mid worker's round yields far below the previous rounds on the same kind of functions: look at the give-up
+  reasons first; if they share a cause, it is forensics, not more workers.
+
+De-escalate when a strong-model task turns out to be a recipe ("declare X as a struct, return the value"): write it
+in the project's decomp guide and hand the class of functions to mid-size workers.
+
+### How to delegate
+
+- One task per agent, a short prompt that points at files (protocol, worklog, the evidence) instead of pasting
+  them, and a report limit (under 200 words, no code). The agent works in the background; the main session waits
+  for its report and does not read its transcript.
+- Never two agents on the same files; write the owner and model into STATE.md.
+- Claude Code: define the roles once as project subagents in `.claude/agents/` (templates/claude-agents/:
+  `decomp-worker` with `model: sonnet`, `decomp-forensics` with `model: opus` and `effort: high`,
+  `decomp-runner` with `model: haiku`) and launch them with the Agent tool by `subagent_type`; the call's `model`
+  parameter overrides the definition for one run. Effort is set only in the definition (`effort: low|medium|high|
+  xhigh|max`) or when the user asks for it.
+- Other agents (Codex, OpenCode, Gemini CLI...): start a separate agent process with the model chosen from the
+  table above, the same four-line prompt and the same report limit.
 
 ## Integrate
 

@@ -60,4 +60,5 @@ match of a few real functions, and the per-function check working. Everything el
 - The progress table of the README between `<!-- dk:progress -->` markers, filled by `dk docs` (`[docs]` in
   decomp.toml): numbers typed by hand go stale.
 - Claude Code: the SessionStart hook of templates/claude-settings.json in `.claude/settings.json`, so every
-  session, `/clear` and compaction starts from `dk state`.
+  session, `/clear` and compaction starts from `dk state`; the subagents of templates/claude-agents/ in
+  `.claude/agents/` (worker, forensics, runner, each with its model and effort).

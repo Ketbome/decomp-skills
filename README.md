@@ -29,8 +29,10 @@ limits, crashes and lost sessions — without losing work.
   | `dk docs [--commit]` | regenerates the `<!-- dk:NAME -->` blocks of README & co. (progress tables) from commands |
 
 - **Orchestration of parallel worker agents**: ranges with a single owner, four-line launch prompts backed by a
-  protocol file, integration in a separate worktree, resource limits for small machines, when to use a cheap or a
-  strong model.
+  protocol file, integration in a separate worktree, resource limits for small machines.
+- **Model and effort per task**: mid-size model for the per-function loop, small model for mechanical runs, strong
+  model with high effort for toolchain forensics; escalation rules; ready-made Claude Code subagents
+  (`decomp-worker`, `decomp-forensics`, `decomp-runner`).
 - **Session recovery** built in: `docs/STATE.md`, per-range worklogs, commit-per-match, a resume checklist.
 - **A main session that stays fresh**: facts re-read from `dk state` instead of remembered, a Claude Code
   SessionStart hook that loads the state at startup, `/clear` and compaction, restarts at quiet points, generated
@@ -128,7 +130,8 @@ skills/matching-decomp/
   references/permuter.md        near misses with decomp-permuter
   scripts/dk.py                 the decomp kit
   templates/                    decomp.toml, STATE.md, AGENTS.md, agent_protocol.md, worklog.md,
-                                claude-settings.json (SessionStart hook running dk state)
+                                claude-settings.json (SessionStart hook running dk state),
+                                claude-agents/ (subagents with their model and effort)
 install.sh                      installer for every agent
 .claude-plugin/                 Claude Code plugin + marketplace manifests
 ```

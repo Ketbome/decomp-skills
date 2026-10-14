@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.3.0 — 2026-10-14
+
+- Choosing models and effort (orchestration.md): which model and effort per task (mid-size workers, small model
+  for mechanical runs, strong model with high effort for toolchain forensics), when to escalate and de-escalate,
+  how to delegate (one task per agent, short prompts, report limits, owners in STATE.md).
+- Templates for Claude Code subagents (`templates/claude-agents/`): `decomp-worker` (sonnet), `decomp-forensics`
+  (opus, effort high), `decomp-runner` (haiku, effort low).
+
 ## 1.2.0 — 2026-10-14
 
 - Keep the main session fresh: facts from `dk state`, not memory; subagents read code, the orchestrator reads
