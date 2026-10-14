@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.2 — 2026-10-14
+
+- `dk state` no longer crashes when generated blocks are stale (paths joined as strings).
+- Worker limits in countable units (matches and functions attempted), not hours: workers stopped after 25-50
+  minutes of a "~3 hours" limit.
+
 ## 1.6.1 — 2026-10-14
 
 - Toolchain catalogue: SN's assembler fills delay slots only with COP2 instructions, and puts an `mtc1` hazard nop

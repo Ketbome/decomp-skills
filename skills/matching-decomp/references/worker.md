@@ -28,7 +28,8 @@ history when you need it.
 8. **Commit** after each match or few: `dk done <file> docs/worklog/<range>.md "decomp: <file> +N functions"`. It
    refuses to commit unless every function of the file matches and the file compiles.
 
-Stop only at the limit the prompt gives or when `dk next --untried` lists nothing left to try: in gh3-decomp all
+Stop only at the limit the prompt gives (in matches and functions attempted: count both and report them) or when
+`dk next --untried` lists nothing left to try: in gh3-decomp all
 three workers of one round stopped at 9 to 12 matches "for lack of viable candidates" with about 2,000 untried
 functions in their ranges. Running out of easy ones means raise `--max-size`, take twins, retry give-ups a toolchain
 fix has removed.
