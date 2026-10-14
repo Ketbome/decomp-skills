@@ -31,8 +31,9 @@ limits, crashes and lost sessions — without losing work.
 - **Orchestration of parallel worker agents**: ranges with a single owner, four-line launch prompts backed by a
   protocol file, integration in a separate worktree, resource limits for small machines.
 - **Model and effort per task**: mid-size model for the per-function loop, small model for mechanical runs, strong
-  model with high effort for toolchain forensics; escalation rules; ready-made Claude Code subagents
-  (`decomp-worker`, `decomp-forensics`, `decomp-runner`).
+  model with high effort for toolchain forensics; escalation rules; ready-made subagents (`decomp-worker`,
+  `decomp-forensics`, `decomp-runner`) for Claude Code, Codex and OpenCode, and the session-start state hook for
+  all three.
 - **Session recovery** built in: `docs/STATE.md`, per-range worklogs, commit-per-match, a resume checklist.
 - **A main session that stays fresh**: facts re-read from `dk state` instead of remembered, a Claude Code
   SessionStart hook that loads the state at startup, `/clear` and compaction, restarts at quiet points, generated
@@ -95,6 +96,8 @@ git clone https://github.com/Ketbome/decomp-skills && cd decomp-skills
 | Shared (Gemini, Cursor, Copilot, OpenCode) | `~/.agents/skills/` | `.agents/skills/` |
 
 Manual install: copy `skills/matching-decomp/` into one of those folders. Restart the agent afterwards.
+OpenCode also reads `~/.claude/skills` and `~/.agents/skills`, and Codex `~/.agents/skills`: install each skill in
+one folder per agent so it is not listed twice.
 
 ### The tool in your project
 
@@ -131,7 +134,8 @@ skills/matching-decomp/
   scripts/dk.py                 the decomp kit
   templates/                    decomp.toml, STATE.md, AGENTS.md, agent_protocol.md, worklog.md,
                                 claude-settings.json (SessionStart hook running dk state),
-                                claude-agents/ (subagents with their model and effort)
+                                claude-agents/, codex/ (hooks.json, agents/*.toml),
+                                opencode/ (plugins/dk-state.js, agents/*.md): subagents and state hooks
 install.sh                      installer for every agent
 .claude-plugin/                 Claude Code plugin + marketplace manifests
 ```

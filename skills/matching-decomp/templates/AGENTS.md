@@ -6,7 +6,8 @@ tool.
 
 ## Start of every session
 
-1. `dk state` (Claude Code runs it at startup, `/clear` and compaction through `.claude/settings.json`): plan
+1. `dk state` (run for you at startup, clear and compaction by `.claude/settings.json`, `.codex/hooks.json` and
+   `.opencode/plugins/dk-state.js`): plan
    (`docs/STATE.md`), commits, uncommitted work, progress, worklog activity, stale documents. Trust it over memory
    and over a compacted summary.
 2. If it shows uncommitted sources or a warning, deal with that first (`dk rescue`, `dk docs --commit`).
@@ -17,7 +18,10 @@ tool.
   current. It does not decompile functions itself and does not read assembly, decompiler drafts, diffs, whole
   worklogs or agent transcripts: investigations go to a subagent that reports in under 200 words. Numbers, hashes
   and worker status come from `dk state` or git when they are stated, never from memory.
-- **Workers** follow `docs/agent_protocol.md` on the files they own.
+- **Delegate to the role subagents** (this file asks for it explicitly): `decomp-worker` (mid-size model, the
+  per-function loop on files it owns, `docs/agent_protocol.md`), `decomp-forensics` (strongest model, high effort,
+  systematic differences), `decomp-runner` (smallest model, exact commands). Definitions: `.claude/agents/`,
+  `.codex/agents/`, `.opencode/agents/`.
 
 ## Keeping documents current (orchestrator, every integration round)
 

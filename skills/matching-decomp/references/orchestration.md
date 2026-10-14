@@ -19,9 +19,13 @@ details. It stays reliable when its context holds decisions, not data:
   committed), clear the context (`/clear` in Claude Code) or open a new session. Nothing is lost: everything is in
   files. Avoid clearing while background workers run; their reports would arrive to a session that does not know
   them (their work is safe in commits and worklogs).
-- **Load the state automatically.** Claude Code: a SessionStart hook (templates/claude-settings.json, in the
-  project's `.claude/settings.json`) runs `dk state` at startup, resume, `/clear` and compaction and puts its output
-  in context. Other agents: `AGENTS.md` starts with "run `dk state` first".
+- **Load the state automatically** at startup, resume, clear and compaction:
+  - Claude Code: SessionStart hook, templates/claude-settings.json → `.claude/settings.json`.
+  - Codex: SessionStart hook, templates/codex/hooks.json → `.codex/hooks.json` (the project must be trusted and
+    the hook approved once in Codex's hook review).
+  - OpenCode: plugin, templates/opencode/plugins/dk-state.js → `.opencode/plugins/` (puts `dk state` in the system
+    prompt of each main session, again after a compaction; subagents skip it).
+  - Any other agent: `AGENTS.md` starts with "run `dk state` first".
 
 ## Keep the documents current
 
@@ -93,13 +97,18 @@ in the project's decomp guide and hand the class of functions to mid-size worker
   them, and a report limit (under 200 words, no code). The agent works in the background; the main session waits
   for its report and does not read its transcript.
 - Never two agents on the same files; write the owner and model into STATE.md.
-- Claude Code: define the roles once as project subagents in `.claude/agents/` (templates/claude-agents/:
-  `decomp-worker` with `model: sonnet`, `decomp-forensics` with `model: opus` and `effort: high`,
-  `decomp-runner` with `model: haiku`) and launch them with the Agent tool by `subagent_type`; the call's `model`
-  parameter overrides the definition for one run. Effort is set only in the definition (`effort: low|medium|high|
-  xhigh|max`) or when the user asks for it.
-- Other agents (Codex, OpenCode, Gemini CLI...): start a separate agent process with the model chosen from the
-  table above, the same four-line prompt and the same report limit.
+- Define the three roles once per agent, with the same instructions (`decomp-worker`, `decomp-forensics`,
+  `decomp-runner`):
+
+  | Agent | Templates → project | Model and effort | Launch |
+  |---|---|---|---|
+  | Claude Code | claude-agents/ → `.claude/agents/` | `model: sonnet / opus / haiku`, `effort: high / low` in the frontmatter | Agent tool by `subagent_type`; its `model` parameter overrides one run |
+  | Codex | codex/agents/ → `.codex/agents/*.toml` | `model_reasoning_effort` (`medium / xhigh / low`); `model` inherits the session's unless pinned | the main agent spawns them by role (`agent_type`); `model`/`reasoning_effort` can be overridden per spawn |
+  | OpenCode | opencode/agents/ → `.opencode/agents/*.md` | `mode: subagent`; `model: <provider>/<model>` per role (omitted = the session's) | task/subagent tool by agent name, or `@decomp-worker` |
+  | others | — | a separate agent process with the model from the table above | same four-line prompt and report limit |
+
+  Codex spawns subagents only when the user, `AGENTS.md` or a skill asks for delegation: the project's `AGENTS.md`
+  says so explicitly (the template does).
 
 ## Integrate
 

@@ -59,6 +59,6 @@ match of a few real functions, and the per-function check working. Everything el
   (e.g. a `CLAUDE.md` copy) drifts. Claude Code reads `AGENTS.md` only when no `CLAUDE.md` exists.
 - The progress table of the README between `<!-- dk:progress -->` markers, filled by `dk docs` (`[docs]` in
   decomp.toml): numbers typed by hand go stale.
-- Claude Code: the SessionStart hook of templates/claude-settings.json in `.claude/settings.json`, so every
-  session, `/clear` and compaction starts from `dk state`; the subagents of templates/claude-agents/ in
-  `.claude/agents/` (worker, forensics, runner, each with its model and effort).
+- Session-start state and role subagents for each agent you use (orchestration.md, "Keep the main session fresh"
+  and "How to delegate"): Claude Code (`.claude/settings.json`, `.claude/agents/`), Codex (`.codex/hooks.json`,
+  `.codex/agents/`), OpenCode (`.opencode/plugins/dk-state.js`, `.opencode/agents/`). All from templates/.

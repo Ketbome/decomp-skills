@@ -20,7 +20,7 @@
 ## Tool and templates
 
 - [dk.py](skills/matching-decomp/scripts/dk.py): show, next, check, try, revert, done, all, twins, state, rescue, docs
-- [decomp.toml](skills/matching-decomp/templates/decomp.toml), [STATE.md](skills/matching-decomp/templates/STATE.md), [AGENTS.md](skills/matching-decomp/templates/AGENTS.md), [agent_protocol.md](skills/matching-decomp/templates/agent_protocol.md), [worklog.md](skills/matching-decomp/templates/worklog.md), [claude-settings.json](skills/matching-decomp/templates/claude-settings.json), [claude-agents/](skills/matching-decomp/templates/claude-agents/) (decomp-worker, decomp-forensics, decomp-runner)
+- [decomp.toml](skills/matching-decomp/templates/decomp.toml), [STATE.md](skills/matching-decomp/templates/STATE.md), [AGENTS.md](skills/matching-decomp/templates/AGENTS.md), [agent_protocol.md](skills/matching-decomp/templates/agent_protocol.md), [worklog.md](skills/matching-decomp/templates/worklog.md), [claude-settings.json](skills/matching-decomp/templates/claude-settings.json), [claude-agents/](skills/matching-decomp/templates/claude-agents/), [codex/](skills/matching-decomp/templates/codex/), [opencode/](skills/matching-decomp/templates/opencode/) (role subagents decomp-worker, decomp-forensics, decomp-runner; session-start state hooks)
 
 ## Install
 

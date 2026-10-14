@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.4.0 — 2026-10-14
+
+- Codex and OpenCode get what Claude Code has: session-start state (`templates/codex/hooks.json`, SessionStart hook;
+  `templates/opencode/plugins/dk-state.js`, system prompt per main session, refreshed after compaction) and the
+  three role subagents with their model and effort (`templates/codex/agents/*.toml`,
+  `templates/opencode/agents/*.md`).
+- How to delegate per agent (orchestration.md); AGENTS.md template asks for delegation explicitly (Codex only
+  spawns subagents when asked).
+- Install notes: OpenCode already reads `~/.claude/skills`; Codex reads `~/.codex/skills` and `~/.agents/skills`.
+
 ## 1.3.0 — 2026-10-14
 
 - Choosing models and effort (orchestration.md): which model and effort per task (mid-size workers, small model
