@@ -16,9 +16,12 @@ instead of tokens, which is the right trade for register-allocation and scheduli
 
 Per function the permuter needs a directory with:
 
-- `base.c`: the preprocessed C it can parse (pycparser): the file reduced to declarations plus the target function.
-  For C++ projects strip `extern "C"` and other C++-only syntax, or hide it with `PERM_IGNORE(...)`, and compile the
-  result as C++ inside `extern "C" { }` in `compile.sh`.
+- `base.c`: the preprocessed source reduced to declarations plus the target function. The permuter parses C
+  (pycparser), so show it only the target function: wrap everything before and after it in `PERM_IGNORE( ... )`
+  (passed to the compiler untouched) and declare every type name the function uses with
+  `PERM_PRETEND(typedef int Name;)` (the parser only needs to know it is a type). That makes C++ sources work too
+  (structs with constructors, inline methods, references): `compile.sh` compiles the result as C++ inside
+  `extern "C" { }`.
 - `compile.sh input.c -o output.o`: the project's real toolchain (compiler, assembly filter, assembler, prelude).
 - `target.o`: the original function assembled from its `.s`.
 - `settings.toml`: `func_name`, `compiler_type = "gcc"`, and `objdump_command` with the right architecture
