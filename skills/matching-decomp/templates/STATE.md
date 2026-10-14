@@ -1,10 +1,8 @@
 # Session state
 
-Rewritten by the orchestrator whenever the plan changes. A new session starts here (`dk state` prints it).
-
-## Verified
-
-- Last integrated and pushed commit: `<hash>` — <percentage> of game code, <N> functions (byte-identical build).
+The plan, rewritten by the orchestrator whenever it changes and committed before the turn ends. A new session starts
+here: `dk state` prints it with the numbers it computes (progress, commits, pushed or not, worklog activity), so no
+progress figures or commit hashes are written by hand here.
 
 ## In flight
 
@@ -20,7 +18,7 @@ Rewritten by the orchestrator whenever the plan changes. A new session starts he
 
 ## Open toolchain questions
 
-- <symptom> — <evidence so far> — <next experiment>
+- <symptom> — <evidence so far, dated> — <next experiment>
 
 ## Next step
 

@@ -27,8 +27,16 @@ sources = ["src/**/*.c"]                    # globs of the C/C++ sources holding
 asm_dirs = ["asm/nonmatchings", "asm/matchings"]   # where splat writes one .s per function
 include_asm = "INCLUDE_ASM"
 state = "docs/STATE.md"
+worklogs = ["docs/worklog/*.md"]            # read by `dk next --untried` and `dk state`
+near_misses = "nonmatching"                 # saved near misses (left out by `dk next --untried`)
 
 [hooks]
 # Commands run on a source file by `dk try`/`dk done` (pre_check) and `dk done` (pre_commit). {file} = the source.
 pre_check = []
 pre_commit = []
+
+[docs]
+# `dk docs` rewrites the blocks between <!-- dk:NAME --> and <!-- /dk:NAME --> in these files with the output of
+# blocks.NAME; `dk state` warns while one is out of date. Numbers typed by hand go stale; generate them.
+files = ["README.md"]
+blocks = { progress = "python3 scripts/progress.py --markdown" }

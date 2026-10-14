@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.2.0 — 2026-10-14
+
+- Keep the main session fresh: facts from `dk state`, not memory; subagents read code, the orchestrator reads
+  reports; decisions committed to files; restarts at quiet points; a checklist that keeps README, `AGENTS.md`,
+  STATE.md, toolchain notes and the guide current every integration round (orchestration.md).
+- `dk docs [--commit]`: regenerates `<!-- dk:NAME -->` blocks (progress tables) from commands (`[docs]` in
+  decomp.toml). STATE.md holds no numbers any more.
+- `dk state`: when each worklog was last committed, how old STATE.md is, warnings for stale generated blocks and
+  long worklogs.
+- `dk next --untried`: leaves out functions any worklog mentions or `nonmatching/` holds; workers read only the
+  notes at the top of their worklog.
+- Templates: `AGENTS.md` (one instructions file for every agent), `claude-settings.json` (SessionStart hook that
+  runs `dk state` at startup, resume, `/clear` and compaction); worklog notes header.
+
 ## 1.1.0 — 2026-10-14
 
 - `dk twins`: decompile functions whose assembly is identical to an already matched one (symbols renamed, local

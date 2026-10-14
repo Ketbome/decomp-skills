@@ -3,6 +3,42 @@
 The orchestrator (integrator) does not decompile much itself. It splits the work, launches workers, integrates and
 verifies, fixes the toolchain when workers hit systematic problems, and keeps `docs/STATE.md` current.
 
+## Keep the main session fresh
+
+The main session lives for hours and is compacted or cleared along the way; a summary of a summary invents
+details. It stays reliable when its context holds decisions, not data:
+
+- **Ground truth from tools, not memory.** Before stating a percentage, a commit, a count or whether a worker is
+  running, run `dk state` (or git). After a compaction, treat the summary as unverified until `dk state` agrees.
+- **Read little.** No assembly, decompiler drafts, diffs, whole worklogs or agent transcripts in the main session.
+  An investigation (why do 40 functions fail the same way?) goes to a subagent that reports in under 200 words;
+  workers report in under 200 words. Read `dk state` and those reports.
+- **Decisions go to files at once.** A plan change, a finding or a new rule is written to STATE.md, the toolchain
+  notes or AGENTS.md and committed before the turn ends, never kept only in the conversation.
+- **Restart at quiet points.** After an integration round (no worker running, everything integrated, STATE.md
+  committed), clear the context (`/clear` in Claude Code) or open a new session. Nothing is lost: everything is in
+  files. Avoid clearing while background workers run; their reports would arrive to a session that does not know
+  them (their work is safe in commits and worklogs).
+- **Load the state automatically.** Claude Code: a SessionStart hook (templates/claude-settings.json, in the
+  project's `.claude/settings.json`) runs `dk state` at startup, resume, `/clear` and compaction and puts its output
+  in context. Other agents: `AGENTS.md` starts with "run `dk state` first".
+
+## Keep the documents current
+
+Every integration round, before restarting:
+
+| Document | Who updates it | When |
+|---|---|---|
+| README progress table | `dk docs --commit` (run by the integration script) | every integration |
+| `docs/STATE.md` | orchestrator, by hand, no numbers | whenever the plan changes |
+| `AGENTS.md` | orchestrator | a command, path, flag or convention changed (same commit) |
+| `docs/toolchain.md` | orchestrator | a toolchain finding is verified (with evidence) |
+| `docs/decomp_guide.md` | orchestrator | a matching pattern appears in two worker reports |
+| worklog notes (top of each worklog) | orchestrator trims, workers append below | a blocker is fixed or found |
+| the skill itself (upstream) | orchestrator | a lesson that is not specific to this game |
+
+`dk state` warns about generated blocks that are out of date, long worklogs and how old STATE.md is.
+
 ## Split the work
 
 - Partition the source files into disjoint **ranges** (e.g. thirds of the code address space). One worker per range;
@@ -13,7 +49,7 @@ verifies, fixes the toolchain when workers hit systematic problems, and keeps `d
   ```
   Matching decompilation of <game> in <path>. Read docs/agent_protocol.md and docs/decomp_guide.md, then follow the
   protocol exactly. Your files: <first> .. <last> (`ls src | sort` order), range "<X>". Worklog: docs/worklog/<X>.md
-  (read it first). Scratch folder: <name>. Priority: <what>. Stop after ~N matches or ~M tries, then report.
+  (read its notes). Scratch folder: <name>. Priority: <what>. Stop after ~N matches or ~M tries, then report.
   ```
 
 - Give each round a **focus** that changes as the project matures: smallest functions first; then the class a
@@ -31,14 +67,15 @@ verifies, fixes the toolchain when workers hit systematic problems, and keeps `d
 
 ## Integrate
 
-1. `dk rescue` if workers were interrupted.
+1. `dk rescue` if workers were interrupted; `dk docs --commit` so the published numbers are current.
 2. Run the full build on the committed HEAD in a separate git worktree (generated files of running workers stay
    untouched): split → (re-add missing `INCLUDE_ASM` lines) → build → compare. Push only if byte-identical. A script
    for this (`scripts/integrate.sh` in the reference project) makes it one command.
 3. If it fails, find the first function whose address moved (compare symbol addresses of the rebuilt ELF with the
    original), not the first differing byte: the cause is usually a missing padding, a missing data declaration or a
    function that grew.
-4. Update STATE.md.
+4. Update STATE.md and the other documents (table above), commit, then restart the main session if it is a quiet
+   point.
 
 ## Changes only the integrator makes, and when
 

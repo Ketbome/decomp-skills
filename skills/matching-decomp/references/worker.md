@@ -1,12 +1,15 @@
 # The per-function loop (worker)
 
 You own a set of source files; nobody else edits them while you run. Your worklog is `docs/worklog/<range>.md`.
-Read it and the project's decomp guide before starting.
+Read the project's decomp guide and the notes at the top of your worklog before starting, not the whole worklog:
+`dk next --untried` already leaves out what was tried, and `grep -n <func> docs/worklog/*.md` gives one function's
+history when you need it.
 
 ## Loop
 
-1. **Pick** — `dk next <your files> [--max-size 0x400]`: smallest first. Skip what your worklog lists as given up
-   for a reason that still holds, and anything flagged `fragment?` (pieces of a mis-split function).
+1. **Pick** — `dk next <your files> --untried [--max-size 0x400]`: smallest first, without the functions any
+   worklog mentions or `nonmatching/` holds. Skip anything flagged `fragment?` (pieces of a mis-split function).
+   Drop `--untried` only when the focus is retrying give-ups that a toolchain fix unblocked.
 2. **Look** — `dk show <func>`: the original assembly (delay-slot instructions indented by one space), labels, an m2c
    draft and the source file that holds the function.
 3. **Write** — replace *only* that function's `INCLUDE_ASM(...)` line with code. Never touch neighbouring lines: every

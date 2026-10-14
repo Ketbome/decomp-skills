@@ -7,7 +7,9 @@ verified unit, state in files); then recovery takes minutes and loses at most th
 ## Resume checklist (do this first, every time)
 
 1. **Read the state.** `dk state` prints `docs/STATE.md`, the last commits, unpushed commits, every uncommitted source
-   file with how many of its functions match, and progress. Also skim the worklogs of the ranges in flight.
+   file with how many of its functions match, progress, when each worklog was last committed, and warnings (stale
+   generated blocks, long worklogs). With the Claude Code hook (templates/claude-settings.json) it is already in
+   context. It is the truth; a compacted summary or your memory of the last session is not.
 2. **Make sure nobody else is still running.** A worker you believe dead may still be editing (background agents can
    outlive the session that started them, or resume after a rate-limit reset). If unsure, stop them or wait; two
    writers on one file lose work.
@@ -25,7 +27,8 @@ verified unit, state in files); then recovery takes minutes and loses at most th
 
 The orchestrator rewrites it whenever the plan changes (template: `templates/STATE.md`). Keep it short and current:
 
-- what is verified and pushed (commit, percentage);
+- no progress figures or commit hashes: `dk state` computes them, and typed numbers go stale (a README that said
+  0.19% when the project was at 22% is how this rule was learnt);
 - who works on what (ranges / files, model, started when, worklog path);
 - pending integrator tasks (names to apply, toolchain fixes waiting for a quiet moment, files to split);
 - open toolchain questions (with the evidence gathered so far);
@@ -42,6 +45,8 @@ of them when looking for systematic problems.
 - Commit after every match or every few (`dk done` does the checking).
 - Never keep progress only in a conversation: plans, findings and decisions go into STATE.md, the worklogs or the
   project docs before the turn ends.
+- Restart the main session at quiet points (orchestration.md, "Keep the main session fresh") instead of letting it
+  compact again and again.
 - After a toolchain change, re-run `dk all` and note the result in STATE.md.
 - When a rate limit is near, stop workers deliberately (they commit as they go), rescue, integrate, update STATE.md.
 - Long runs on a small machine: limit parallelism (e.g. 3 workers, build with `-j4`, one compile per worker at a

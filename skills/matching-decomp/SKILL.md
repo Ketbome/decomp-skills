@@ -21,6 +21,7 @@ This skill provides the method, a tool (`scripts/dk.py`, "decomp kit") and templ
 | Starting a new project (split the binary, find the compiler, first match) | [references/setup.md](references/setup.md) |
 | Decompiling functions yourself, or as a worker agent | [references/worker.md](references/worker.md) |
 | Running several worker agents in parallel and integrating their work | [references/orchestration.md](references/orchestration.md) |
+| Being the main session: stay fresh, keep README/AGENTS.md/STATE.md current | [references/orchestration.md](references/orchestration.md) (first two sections) |
 | A function "should" match but the bytes differ in a systematic way | [references/toolchain-forensics.md](references/toolchain-forensics.md) |
 | Techniques to steer the compiler (registers, order, branches, loops) | [references/matching.md](references/matching.md) |
 | Near misses: let decomp-permuter search instead of spending tokens | [references/permuter.md](references/permuter.md) |
@@ -32,14 +33,17 @@ This skill provides the method, a tool (`scripts/dk.py`, "decomp kit") and templ
 
 ```
 dk show <func>                 original asm + m2c draft + which source holds it
-dk next <src...> [--max-size]  INCLUDE_ASM functions, smallest first, flags: jtbl, vu0:N%, fragment?
+dk next <src...> [--untried]   INCLUDE_ASM functions, smallest first, flags: jtbl, vu0:N%, fragment?;
+                               --untried: without what a worklog mentions or nonmatching/ holds
 dk try <src> <func>            pre-check hooks, then compare that function with the original bytes
 dk revert <src> <func>         back to INCLUDE_ASM
 dk done <src> <log> <msg>      refuse unless every function of <src> matches, then commit <src> + <log>
 dk all                         check every written function (after any toolchain change)
 dk twins [--list]              copy matched functions onto identical ones (one match -> many)
-dk state                       recovery report: STATE.md, uncommitted sources and whether they match, commits
+dk state                       recovery report: STATE.md, uncommitted sources and whether they match, commits,
+                               progress, worklog activity, warnings (stale documents)
 dk rescue [--commit]           revert work-in-progress that does not match, keep and commit the rest
+dk docs [--commit]             regenerate the <!-- dk:NAME --> blocks of README & co. from commands
 ```
 
 `check` compiles the source privately (safe in parallel), takes the function out of the object and compares it
@@ -52,15 +56,20 @@ linking. The full build (`ninja` or whatever the project uses) stays the final w
    rebuilt binary is byte-identical. Never leave non-matching code in place of the original asm.
 2. **Commit each verified unit immediately** (`dk done`), only your own paths, never `git add -A`. A crash then
    loses one function at most.
-3. **State in files.** The orchestrator keeps `docs/STATE.md` (template:
-   [templates/STATE.md](templates/STATE.md)); every worker keeps a worklog of matches and give-ups with reasons.
-   A new session reads those instead of re-deriving anything.
-4. **One owner per file.** Parallel workers get disjoint sets of source files; only the integrator runs the
+3. **State in files, numbers from tools.** The orchestrator keeps `docs/STATE.md` (template:
+   [templates/STATE.md](templates/STATE.md)), the plan without numbers; every worker keeps a worklog of matches and
+   give-ups with reasons. Progress figures come from `dk state` or are generated into documents (`dk docs`), never
+   typed by hand. A new session reads those instead of re-deriving anything.
+4. **Keep the main session fresh.** It decides and integrates; subagents read code and report in a few lines. Facts
+   are re-read from `dk state`, not remembered; decisions are committed to files before the turn ends; the session
+   restarts at quiet points with the state loaded by a hook. One instructions file, `AGENTS.md`
+   ([template](templates/AGENTS.md)), updated in the same commit as any command or convention it describes.
+5. **One owner per file.** Parallel workers get disjoint sets of source files; only the integrator runs the
    splitter, renames symbols, edits shared headers or the build.
-5. **Fix the toolchain, not the function.** When many functions fail the same way, the cause is almost always a
+6. **Fix the toolchain, not the function.** When many functions fail the same way, the cause is almost always a
    compiler flag or an assembler behaviour (see toolchain-forensics). One fix there unblocks hundreds of functions;
    check every fix against all matched functions (`dk all`) before committing it.
-6. **Spend tokens where they pay.** Cheap model for the per-function loop, strong model for toolchain forensics;
+7. **Spend tokens where they pay.** Cheap model for the per-function loop, strong model for toolchain forensics;
    near misses go to the permuter (CPU), not to fifteen more manual attempts.
-7. **Clean room.** Names and types come from the binary, the game's own data and your analysis; never from leaked
+8. **Clean room.** Names and types come from the binary, the game's own data and your analysis; never from leaked
    or copyrighted source code. Never commit game data (ISO, extracted files, generated asm).

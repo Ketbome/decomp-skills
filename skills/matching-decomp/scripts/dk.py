@@ -5,7 +5,9 @@ decompilation (splat-style layout: one .s per function, C/C++ sources with INCLU
 Configured by a `decomp.toml` at the project root (see templates/decomp.toml). Commands:
 
   dk show <func> [--no-m2c]           original assembly (compact) + an m2c draft + where the function lives
-  dk next <src...> [--max-size N]     functions still in INCLUDE_ASM, smallest first, with flags (jtbl, vu0:N%, ...)
+  dk next <src...> [--max-size N] [--untried]
+                                      functions still in INCLUDE_ASM, smallest first, with flags (jtbl, vu0:N%, ...);
+                                      --untried leaves out functions named in a worklog or saved as a near miss
   dk check <src> <func...> | --all    compile <src> privately and compare functions with the original bytes;
                                       relocated fields are compared by symbol (+ addend), not by value
   dk try <src> <func...>              run the configured pre-check hooks on <src>, then `check`
@@ -14,8 +16,10 @@ Configured by a `decomp.toml` at the project root (see templates/decomp.toml). C
   dk all [<src>...]                   check every C/C++ function (regression check after a toolchain change)
   dk twins [--list] [<src>...]        copy matched functions onto functions with identical assembly (symbols renamed,
                                       local types copied), keep only what matches
-  dk state                            recovery report: uncommitted sources and whether they match, last commits,
-                                      progress, the session state file
+  dk state                            recovery report: the session state file, last commits, uncommitted sources
+                                      and whether they match, progress, worklog activity, stale documents
+  dk docs [--commit]                  rewrite the generated blocks of the documents (<!-- dk:NAME --> ... <!-- /dk:NAME -->)
+                                      with the output of their commands; --commit commits the changed documents
   dk rescue [--commit]                after an interruption: for every modified source, revert the functions that do
                                       not match (only those that were INCLUDE_ASM at HEAD), then optionally commit
 
@@ -69,6 +73,10 @@ ASM_DIRS = [cfg_path(d) for d in L.get("asm_dirs", ["asm/nonmatchings", "asm/mat
 SOURCES = L.get("sources", ["src/**/*.c", "src/**/*.cpp"])
 INCLUDE_ASM = L.get("include_asm", "INCLUDE_ASM")
 STATE = cfg_path(L.get("state", "docs/STATE.md"))
+WORKLOGS = L.get("worklogs", ["docs/worklog/*.md"])
+WORKLOGS = [WORKLOGS] if isinstance(WORKLOGS, str) else WORKLOGS
+NEAR_MISSES = cfg_path(L.get("near_misses", "nonmatching"))
+DOCS = CFG.get("docs", {})
 FLAG_MARKER = TC.get("file_flags_marker", "// cflags:")
 
 
@@ -365,16 +373,36 @@ def cmd_show(args):
         print((r.stdout or r.stderr).strip()[:6000])
 
 
+def worklogs():
+    return sorted({p for pattern in WORKLOGS for p in glob.glob(str(ROOT / pattern))})
+
+
+def tried_functions():
+    """Functions named in a worklog or saved as a near miss."""
+    names = set()
+    for log in worklogs():
+        names |= set(re.findall(r"\b\w+\b", Path(log).read_text()))
+    if NEAR_MISSES and NEAR_MISSES.exists():
+        names |= {p.stem for p in NEAR_MISSES.iterdir()}
+    return names
+
+
 def cmd_next(args):
     max_size = 1 << 32
     if "--max-size" in args:
         k = args.index("--max-size")
         max_size = int(args[k + 1], 0)
         args = args[:k] + args[k + 2:]
+    skip = set()
+    if "--untried" in args:
+        args = [a for a in args if a != "--untried"]
+        skip = tried_functions()
     files = [Path(a) for a in args] or source_files()
     rows = []
     for src in files:
         for folder, name in re.findall(rf'^{INCLUDE_ASM}\("([^"]+)",\s*(\w+)\);', Path(src).read_text(), re.M):
+            if name in skip:
+                continue
             path = ROOT / folder / f"{name}.s"
             if not path.exists():
                 path = find_asm(name)
@@ -462,6 +490,58 @@ def cmd_state(args):
     if TC.get("progress"):
         print("\n== progress")
         print(sh(TC["progress"], capture_output=True, text=True).stdout.strip())
+    print("\n== worklogs (last commit, lines)")
+    warnings, long = [], []
+    for log in worklogs():
+        lines = len(Path(log).read_text().splitlines())
+        when = git("log", "-1", "--format=%cr", "--", rel(log)).stdout.strip() or "never committed"
+        print(f"{rel(log)}: {when}, {lines} lines")
+        if lines > 400:
+            long.append(f"{Path(log).name} {lines}")
+    if long:
+        warnings.append(f"long worklogs ({', '.join(long)} lines): workers read only the notes at the top and use "
+                        "`dk next --untried`")
+    last = git("log", "-1", "--format=%H %cr", "--", rel(STATE)).stdout.strip() if STATE else ""
+    if last:
+        sha, when = last.split(" ", 1)
+        ago = git("rev-list", "--count", "HEAD", f"^{sha}").stdout.strip()
+        print(f"{rel(STATE)}: {when}, {ago} commits ago")
+    stale = [f for f, _ in render_docs()]
+    if stale:
+        warnings.append(f"generated blocks out of date in {', '.join(stale)}: run `dk docs --commit`")
+    if warnings:
+        print("\n== warnings")
+        print("\n".join(warnings))
+
+
+def render_docs():
+    """(path, new text) for every configured document whose generated blocks are out of date."""
+    out = []
+    blocks = {name: None for name in DOCS.get("blocks", {})}
+    for doc in DOCS.get("files", []):
+        path = ROOT / doc
+        text = new = path.read_text()
+        for name, cmd in DOCS.get("blocks", {}).items():
+            if f"<!-- dk:{name} -->" not in new:
+                continue
+            if blocks[name] is None:
+                blocks[name] = sh(cmd, capture_output=True, text=True).stdout.strip()
+            new = re.sub(rf"(<!-- dk:{name} -->\n).*?(\n?<!-- /dk:{name} -->)",
+                         lambda m: m.group(1) + blocks[name] + "\n" + m.group(2).lstrip("\n"), new, flags=re.S)
+        if new != text:
+            out.append((path, new))
+    return out
+
+
+def cmd_docs(args):
+    changed = render_docs()
+    for path, text in changed:
+        path.write_text(text)
+        print(f"{rel(path)}: updated")
+    if not changed:
+        print("documents up to date")
+    elif "--commit" in args:
+        print(commit([p for p, _ in changed], "docs: progress") or "commit failed")
 
 
 def cmd_rescue(args):
@@ -631,7 +711,8 @@ def cmd_twins(args):
 
 
 COMMANDS = {"show": cmd_show, "next": cmd_next, "check": cmd_check, "try": cmd_try, "revert": cmd_revert,
-            "done": cmd_done, "all": cmd_all, "twins": cmd_twins, "state": cmd_state, "rescue": cmd_rescue}
+            "done": cmd_done, "all": cmd_all, "twins": cmd_twins, "state": cmd_state, "rescue": cmd_rescue,
+            "docs": cmd_docs}
 
 
 def main():

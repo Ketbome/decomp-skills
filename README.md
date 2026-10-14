@@ -18,19 +18,23 @@ limits, crashes and lost sessions — without losing work.
   | Command | What it does |
   |---|---|
   | `dk show <func>` | original assembly, labels, an [m2c](https://github.com/matt-kempster/m2c) draft, the source file |
-  | `dk next <src...>` | functions still in `INCLUDE_ASM`, smallest first, flagged (`jtbl`, `vu0:N%`, `fragment?`) |
+  | `dk next <src...> [--untried]` | functions still in `INCLUDE_ASM`, smallest first, flagged (`jtbl`, `vu0:N%`, `fragment?`); `--untried` leaves out what any worklog mentions, so workers need not read long worklogs |
   | `dk check <src> <func>` | compiles privately and compares with the original bytes; relocations compared by symbol, so no link needed and safe in parallel |
   | `dk try` / `dk revert` | pre-check hooks + check / back to `INCLUDE_ASM` |
   | `dk done <src> <log> <msg>` | refuses to commit unless every function of the file matches |
   | `dk all` | checks every written function (run after any toolchain change) |
   | `dk twins` | copies matched functions onto functions with identical assembly: one match yields many |
-  | `dk state` | **recovery report**: session state file, uncommitted sources and whether they match, unpushed commits, progress |
+  | `dk state` | **recovery report**: session state file, uncommitted sources and whether they match, unpushed commits, progress, worklog activity, warnings about stale documents |
   | `dk rescue [--commit]` | **after an interruption**: reverts work in progress that does not match, keeps and commits the rest |
+  | `dk docs [--commit]` | regenerates the `<!-- dk:NAME -->` blocks of README & co. (progress tables) from commands |
 
 - **Orchestration of parallel worker agents**: ranges with a single owner, four-line launch prompts backed by a
   protocol file, integration in a separate worktree, resource limits for small machines, when to use a cheap or a
   strong model.
 - **Session recovery** built in: `docs/STATE.md`, per-range worklogs, commit-per-match, a resume checklist.
+- **A main session that stays fresh**: facts re-read from `dk state` instead of remembered, a Claude Code
+  SessionStart hook that loads the state at startup, `/clear` and compaction, restarts at quiet points, generated
+  progress numbers, and a checklist that keeps README, `AGENTS.md`, STATE.md and the toolchain notes current.
 - **Toolchain forensics**: how to find the compiler flag or assembler behaviour behind a difference that blocks
   hundreds of functions — plus a catalogue of what was found for SN Systems ee-gcc (PS2): one-pass `$gp` vs `lui`
   addressing, inline `li.s`, R5900 short-loop padding, hazard nops, `-fopt-stack`, jump-table reuse, unoptimised
@@ -107,6 +111,7 @@ Ask your agent in plain words; the skill triggers on decompilation work:
 - "Decompile the smallest functions in src/game/t_2001E0.cpp."
 - "Run three worker agents on the remaining functions and integrate their work."
 - "The session was cut off — recover and continue." (→ `dk state`, `dk rescue`, resume checklist)
+- "Integrate this round, update the docs and get ready for a fresh session." (→ orchestration checklist)
 - "Many functions fail with an extra nop before div.s; find out why."
 
 ## Layout
@@ -122,7 +127,8 @@ skills/matching-decomp/
   references/matching.md        steering the compiler
   references/permuter.md        near misses with decomp-permuter
   scripts/dk.py                 the decomp kit
-  templates/                    decomp.toml, STATE.md, agent_protocol.md, worklog.md
+  templates/                    decomp.toml, STATE.md, AGENTS.md, agent_protocol.md, worklog.md,
+                                claude-settings.json (SessionStart hook running dk state)
 install.sh                      installer for every agent
 .claude-plugin/                 Claude Code plugin + marketplace manifests
 ```

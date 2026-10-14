@@ -12,15 +12,15 @@
 - [Recovery](skills/matching-decomp/references/recovery.md): resume after crashes, rate limits, lost context
 - [Setup](skills/matching-decomp/references/setup.md): start a project (splat, byte-identical rebuild, compiler identification)
 - [Worker loop](skills/matching-decomp/references/worker.md): decompile one function at a time
-- [Orchestration](skills/matching-decomp/references/orchestration.md): parallel worker agents and integration
+- [Orchestration](skills/matching-decomp/references/orchestration.md): keeping the main session fresh and the docs current, parallel worker agents, integration
 - [Toolchain forensics](skills/matching-decomp/references/toolchain-forensics.md): systematic differences, PS2 SN ee-gcc catalogue
 - [Matching techniques](skills/matching-decomp/references/matching.md)
 - [Permuter](skills/matching-decomp/references/permuter.md): near misses with decomp-permuter
 
 ## Tool and templates
 
-- [dk.py](skills/matching-decomp/scripts/dk.py): show, next, check, try, revert, done, all, state, rescue
-- [decomp.toml](skills/matching-decomp/templates/decomp.toml), [STATE.md](skills/matching-decomp/templates/STATE.md), [agent_protocol.md](skills/matching-decomp/templates/agent_protocol.md), [worklog.md](skills/matching-decomp/templates/worklog.md)
+- [dk.py](skills/matching-decomp/scripts/dk.py): show, next, check, try, revert, done, all, twins, state, rescue, docs
+- [decomp.toml](skills/matching-decomp/templates/decomp.toml), [STATE.md](skills/matching-decomp/templates/STATE.md), [AGENTS.md](skills/matching-decomp/templates/AGENTS.md), [agent_protocol.md](skills/matching-decomp/templates/agent_protocol.md), [worklog.md](skills/matching-decomp/templates/worklog.md), [claude-settings.json](skills/matching-decomp/templates/claude-settings.json)
 
 ## Install
 

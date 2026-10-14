@@ -3,10 +3,13 @@
 Read this and `docs/decomp_guide.md` (the project's matching rules), then work. You own a set of source files that
 nobody else edits while you run. Run every command from the project root.
 
+Your worklog: read only the notes at its top, not the whole file. `grep -n <func> docs/worklog/*.md` gives a
+function's history before you retry it.
+
 ## Per function
 
-1. Pick: `dk next <your files> [--max-size 0x400]` (smallest first). Skip `fragment?` entries and what your worklog
-   lists as given up for a reason that still holds.
+1. Pick: `dk next <your files> --untried [--max-size 0x400]` (smallest first, without what any worklog mentions or
+   `nonmatching/` holds). Skip `fragment?` entries.
 2. Look: `dk show <func>` (original asm, labels, m2c draft, the source that holds it).
 3. Write the code in place of that function's `INCLUDE_ASM` line only; never touch neighbouring lines.
 4. Check: `dk try <file> <func>`. Iterate: size, then control flow, then registers and order.

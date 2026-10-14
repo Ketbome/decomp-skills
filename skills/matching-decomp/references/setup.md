@@ -53,5 +53,11 @@ match of a few real functions, and the per-function check working. Everything el
 
 - `docs/decomp_guide.md` (project rules: linkage, data, globals, flags), `docs/agent_protocol.md` (from
   templates/), `docs/STATE.md`, `docs/worklog/`.
-- A one-command integration script (build HEAD in a separate worktree, push if identical).
-- A `CLAUDE.md`/`AGENTS.md` with stack, commands, conventions and the clean-room rule.
+- A one-command integration script: `dk docs --commit`, build HEAD in a separate worktree, push if identical.
+- `AGENTS.md` (template in templates/; Claude Code, Codex, OpenCode, Cursor and Copilot read it) with the session
+  start, roles, stack, commands, layout, conventions and the clean-room rule. One file: a second instructions file
+  (e.g. a `CLAUDE.md` copy) drifts. Claude Code reads `AGENTS.md` only when no `CLAUDE.md` exists.
+- The progress table of the README between `<!-- dk:progress -->` markers, filled by `dk docs` (`[docs]` in
+  decomp.toml): numbers typed by hand go stale.
+- Claude Code: the SessionStart hook of templates/claude-settings.json in `.claude/settings.json`, so every
+  session, `/clear` and compaction starts from `dk state`.
