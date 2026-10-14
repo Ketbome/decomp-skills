@@ -41,6 +41,18 @@ most of `dk` apply to other architectures; relocation-aware comparison is implem
 
 ## Install
 
+### Any agent, one command (recommended)
+
+With the [skills CLI](https://github.com/vercel-labs/skills) ([skills.sh](https://skills.sh)), which knows where
+every agent keeps its skills:
+
+```sh
+npx skills add Ketbome/decomp-skills              # current project, asks which agents
+npx skills add Ketbome/decomp-skills -g           # user level, every project
+npx skills add Ketbome/decomp-skills -a claude-code -a codex -a opencode -a cursor -a gemini-cli -y
+npx skills update                                 # later: get new versions
+```
+
 ### Claude Code (plugin)
 
 ```

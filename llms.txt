@@ -24,7 +24,7 @@
 
 ## Install
 
-- [README](README.md): install for every agent; `install.sh --all`; Claude Code plugin marketplace `Ketbome/decomp-skills`
+- [README](README.md): install for every agent; `npx skills add Ketbome/decomp-skills`; `install.sh --all`; Claude Code plugin marketplace `Ketbome/decomp-skills`
 
 ## Reference project
 
