@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.4 — 2026-10-19
+
+- Launch prompt template: exact limits stated as "stop ONLY at", and the stop rule repeated in the prompt (a
+  worker kept stopping early with only the protocol file saying it); per-worker scratch folder outside the repo.
+
 ## 1.6.3 — 2026-10-14
 
 - Toolchain catalogue: gcc-allocated VU0 registers (`register ... asm("vf1")`, `"j"`) and their `$` spelling;

@@ -53,8 +53,13 @@ Every integration round, before restarting:
   ```
   Matching decompilation of <game> in <path>. Read docs/agent_protocol.md and docs/decomp_guide.md, then follow the
   protocol exactly. Your files: <first> .. <last> (`ls src | sort` order), range "<X>". Worklog: docs/worklog/<X>.md
-  (read its notes). Scratch folder: <name>. Priority: <what>. Stop after ~N matches or ~M tries, then report.
+  (read its notes). Scratch folder: <name>. Priority: <what>. Stop ONLY at N matches or M functions attempted
+  (count both); running out of easy candidates is not a reason to stop. Then report.
   ```
+
+  Exact numbers, not "~N": a worker reads an approximate limit as permission to stop at the first dry patch, and
+  the protocol file alone does not prevent it (a worker that stopped early kept doing so until the prompt itself
+  repeated the rule). The scratch folder is per worker and outside the repo (e.g. `<session scratch>/<X>`).
 
 - Give each round a **focus** that changes as the project matures: smallest functions first; then the class a
   toolchain fix just unblocked (retry its give-ups first); then mid-size functions nobody tried; then special
