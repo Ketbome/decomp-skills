@@ -26,6 +26,8 @@ MIPS; the ideas carry over to other old compilers.
 - **Prototypes matter**: the order of float vs int parameters, a callee declared `int` instead of `void` (changes
   `$v0/$v1` choices), `void*` vs `void` returns. A second prototype for the same symbol (`__asm__("name")` alias)
   when callers disagree on arity.
+- m2c lists extra arguments on virtual and constructor calls (whatever sits in `$a1..$a3`): pass only the real
+  ones; the leftover registers already hold the right values.
 - Pass through untouched argument registers (`g(p); return p;`); return the result of a virtual call.
 - Last resorts, used sparingly: an empty `asm("" : "+r"(x))` barrier (forces a copy or blocks reassociation), a
   `register T x asm("$N")` pin on the smallest set of variables. Never ordinary instructions in asm.

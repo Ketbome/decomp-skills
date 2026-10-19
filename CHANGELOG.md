@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.6.5 — 2026-10-19
+
+- `dk twins`: when a symbol the twin uses is declared with other types in the target file, declare the twin's
+  version under an `__asm__("sym")` alias instead of giving up (3 of 4 such twins in GH3 now match automatically;
+  they had been written by hand). A function whose own return type differs is still skipped.
+- Matching notes: m2c's extra arguments on virtual and constructor calls.
+
 ## 1.6.4 — 2026-10-19
 
 - Launch prompt template: exact limits stated as "stop ONLY at", and the stop rule repeated in the prompt (a
