@@ -59,7 +59,8 @@ Every integration round, before restarting:
 
   Exact numbers, not "~N": a worker reads an approximate limit as permission to stop at the first dry patch, and
   the protocol file alone does not prevent it (a worker that stopped early kept doing so until the prompt itself
-  repeated the rule). The scratch folder is per worker and outside the repo (e.g. `<session scratch>/<X>`).
+  repeated the rule). Workers also lose their count when their context is compacted: the protocol makes them keep
+  it as a line in the worklog. The scratch folder is per worker and outside the repo (e.g. `<session scratch>/<X>`).
 
 - Give each round a **focus** that changes as the project matures: smallest functions first; then the class a
   toolchain fix just unblocked (retry its give-ups first); then mid-size functions nobody tried; then special

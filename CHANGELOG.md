@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.6 — 2026-10-19
+
+- Worker protocol: keep the round's match/attempt count as a line in the worklog, updated on each commit. A worker
+  stopped at 14/40 of a 25/60 limit because it lost the count when its context was compacted.
+
 ## 1.6.5 — 2026-10-19
 
 - `dk twins`: when a symbol the twin uses is declared with other types in the target file, declare the twin's
