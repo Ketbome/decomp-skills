@@ -71,7 +71,11 @@ Every integration round, before restarting:
 - Workers are independent processes that each compile code: on a 16 GB machine, three at a time is a safe ceiling;
   build with limited parallelism (`ninja -j4`). One compile/check at a time per worker.
 - When the per-round yield drops (few matches per hundred tried), change the focus or fix the toolchain: do not just
-  relaunch the same worker.
+  relaunch the same worker. Workers stopping early with "the easy ones ran out" is that signal too, even when the
+  prompt forbids stopping: switch them to larger functions, send the blocking family to forensics, or run the
+  permuter. A size window in a prompt reads as a ceiling: say "smallest first, no ceiling" unless you mean one.
+- Worklog notes that call something a toolchain gap outlive the fix and keep workers away from those functions:
+  when a forensics task closes a question, correct or delete the notes that cite it.
 
 ## Choosing models and effort
 

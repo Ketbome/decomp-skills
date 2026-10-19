@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.7 — 2026-10-19
+
+- Matching notes: conditional moves where the original branches are C shape on GCC 2.9x (write the value through a
+  reference parameter of an inline helper); count the original's conditional moves before blaming a flag.
+- Orchestration: early stops as a yield signal; size windows read as ceilings; stale toolchain notes in worklogs.
+
 ## 1.6.6 — 2026-10-19
 
 - Worker protocol: keep the round's match/attempt count as a line in the worklog, updated on each commit. A worker

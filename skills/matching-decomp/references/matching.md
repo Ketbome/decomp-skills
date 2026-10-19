@@ -13,6 +13,11 @@ MIPS; the ideas carry over to other old compilers.
   own `case N:` (otherwise the compiler builds a compare chain); an explicit `case 0:` when the table starts at 0;
   `goto` for a case that falls into another. Small checksum switches are often balanced compare trees: a dummy case
   can add the missing node.
+- **Conditional moves** (`movz`/`movn`, `cmov`) where the original branches on `if (c) x = v;`: GCC 2.9x
+  if-converts only when `x` is in a register at that pass. Write `x` through a reference parameter of a `static
+  inline` helper and the branch stays; try the inverted test too. Check how often the original uses the conditional
+  move before blaming a flag (in one game: 1365 times in 663 functions; the flags that kept the branch broke 209
+  matched functions).
 - **Unrolled loops**: if the original has repeated bodies with a constant stride, write the loop and enable
   unrolling for that object.
 
