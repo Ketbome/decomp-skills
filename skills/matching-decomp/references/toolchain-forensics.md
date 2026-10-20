@@ -30,6 +30,9 @@ decomp: one fix routinely unblocks hundreds of functions. Do it with a strong mo
    tables: the k-th occurrence in a function gets what the k-th one has in its original `.s`. Document it as
    inferred, not derived.
 7. **Prove it.** `dk all` before and after: no matched function may break. Then a worker retries the give-ups.
+   `dk all` does not run the `pre_check` hooks: if the fix changes what a hook writes into sources (e.g. which
+   small-data declarations are needed), run that hook over every source first and commit its output with the fix,
+   or the integration build breaks on files nobody is editing.
 8. **Document** the rule, the evidence and the numbers in `docs/toolchain.md`; leave open questions there too.
 
 ## Catalogue: SN Systems ee-gcc 2.95.3 (PS2) and the modern GNU assembler

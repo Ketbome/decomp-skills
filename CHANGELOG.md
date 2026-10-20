@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.6.8 — 2026-10-19
+
+- Forensics: a fix that changes what a `pre_check` hook writes must be followed by that hook over every source
+  before `dk all` (dk all does not run hooks; an integration build broke on 28 functions of an unowned file).
+
 ## 1.6.7 — 2026-10-19
 
 - Matching notes: conditional moves where the original branches are C shape on GCC 2.9x (write the value through a
