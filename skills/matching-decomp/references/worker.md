@@ -17,7 +17,8 @@ history when you need it.
    conventions for names, linkage (`extern "C"` in C++ projects), declarations and local structs.
 4. **Check** — `dk try <file> <func>`. Read the diff: size first (missing/extra code), then control flow, then
    register choice and order. Iterate.
-5. **Near miss** — only registers or instruction order differ after a few honest tries: save the whole file with
+5. **Near miss** — only registers or instruction order differ after a few honest tries: run `dk protos <file>
+   <func>` first (callee return types decide `$v0`/`$v1` choices around calls); still not matching: save the whole file with
    your attempt as `nonmatching/<func>.<ext>`, commit it ("near miss: <func>"), log it, revert, move on. The
    permuter will search for you (permuter.md).
 6. **Give up** after ~15 attempts: `dk revert <file> <func>`, keep any prototype other code in the file still needs,

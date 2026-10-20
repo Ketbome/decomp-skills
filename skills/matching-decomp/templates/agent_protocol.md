@@ -13,7 +13,8 @@ function's history before you retry it.
 2. Look: `dk show <func>` (original asm, labels, m2c draft, the source that holds it).
 3. Write the code in place of that function's `INCLUDE_ASM` line only; never touch neighbouring lines.
 4. Check: `dk try <file> <func>`. Iterate: size, then control flow, then registers and order.
-5. Near miss (only registers/order differ after a few tries): save the whole file with your attempt as
+5. Near miss (only registers/order differ after a few tries): first `dk protos <file> <func>` (tries the other
+   return type for each callee; writes the fix if one matches). Still not matching: save the whole file with your attempt as
    `nonmatching/<func>.<ext>`, `git add` it and commit "near miss: <func>", note it in the worklog, revert, move on.
 6. Give up after ~15 tries: `dk revert <file> <func>`; keep prototypes other code needs; log the reason.
 7. Commit after each match or few: `dk done <file> docs/worklog/<range>.md "decomp: <file> +N functions"`.

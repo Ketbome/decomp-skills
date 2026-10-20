@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.7.0 — 2026-10-20
+
+- `dk protos <src> <func>`: redeclares each function <func> calls with the other return type (void <-> int) through
+  `__asm__` aliases used only by <func>, one and two at a time, and writes a combination that matches. In GH3 a
+  worker's ad-hoc version of this sweep matched 4 near misses in one pass; worker protocol and worker.md run it
+  before saving a near miss.
+
 ## 1.6.8 — 2026-10-19
 
 - Forensics: a fix that changes what a `pre_check` hook writes must be followed by that hook over every source
