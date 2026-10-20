@@ -33,9 +33,13 @@ MIPS; the ideas carry over to other old compilers.
   when callers disagree on arity.
 - m2c lists extra arguments on virtual and constructor calls (whatever sits in `$a1..$a3`): pass only the real
   ones; the leftover registers already hold the right values.
+- **Copies the original keeps** (`move a0,v1` before a loop) where yours has none: the original recomputed a
+  loop-invariant value inside the loop and GCC hoisted it into a copy. Recompute it from the same base pointer in
+  the loop condition or body instead of reusing a variable, one new variable per reload. Not a flag.
 - Pass through untouched argument registers (`g(p); return p;`); return the result of a virtual call.
 - Last resorts, used sparingly: an empty `asm("" : "+r"(x))` barrier (forces a copy or blocks reassociation), a
-  `register T x asm("$N")` pin on the smallest set of variables. Never ordinary instructions in asm.
+  `register T x asm("$N")` pin on the smallest set of variables (GCC 2.95 ignores such pins unless the variable
+  is an operand of an asm statement). Never ordinary instructions in asm.
 
 ## Data and globals
 

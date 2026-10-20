@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.1 — 2026-10-20
+
+- Matching notes: register copies the original keeps come from a loop invariant the source recomputes (not a flag);
+  GCC 2.95 ignores local register pins unless the variable feeds an asm statement.
+
 ## 1.7.0 — 2026-10-20
 
 - `dk protos <src> <func>`: redeclares each function <func> calls with the other return type (void <-> int) through
