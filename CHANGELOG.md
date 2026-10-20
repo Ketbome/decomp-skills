@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.2 — 2026-10-20
+
+- Toolchain catalogue: small-data sizes reset at original object ends (`OBJECT_END()` marker); conditional moves and
+  kept register copies are C shape; hooks must resolve alias-defined functions (a skipped `TEXT_PAD` showed only in
+  the full build).
+
 ## 1.7.1 — 2026-10-20
 
 - Matching notes: register copies the original keeps come from a loop invariant the source recomputes (not a flag);

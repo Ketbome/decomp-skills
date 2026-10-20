@@ -55,6 +55,8 @@ hazard nops, errata workarounds) recur on other consoles.
 | `usd` stored `sdr` then `sdl` | | filter writes them out in that order |
 | `move` is `daddu` | 64-bit moves | prelude macro |
 | 8+ bytes of zero padding after some functions | end of an original object file (linker aligned objects to 16) | `TEXT_PAD(n)` after the function |
+| A global reached with `lui/%lo` after an earlier `GP_DATA` makes ours `%gp_rel` | the one-pass assembler forgot known sizes at the next original object; a source file merges several objects, some ending on a 16-byte boundary with no padding left | `TEXT_PAD` and an `OBJECT_END()` marker reset the known sizes in the filter and in the hook that writes `GP_DATA` |
+| Conditional moves (`movz`/`movn`) where the original branches; `move` copies the original keeps before loops | not the toolchain: GCC 2.9x if-converts only values in registers, and hoists loop invariants the source recomputes | C shape (matching.md) |
 | `switch` jump table | the table lives in the game's rodata | filter drops the compiler's table and points the code at the original `jtbl_` symbol; configure defines the case labels |
 | 0 or 2 nops before `div.s`, no rule (418 of ~700 have 2; identical sequences get either) | SN's later assembler, not available; ee-gcc and the shipped `as` emit none, Sony's ee-gcc 2.96/3.2 always 2 | filter gives the k-th `div.s` of a function the nop count of the k-th in its original `.s`, inside `.set noreorder` (inline-asm `div.s` untouched) |
 | A `nop` delay slot after a volatile store or `cvt.s.w`; ours moves that instruction into the slot | SN's assembler fills slots only with COP2 instructions (`lqc2`, `sqc2`, `qmfc2`, `qmtc2`, `v*`); the modern gas moves anything it can (verified with the compiler's own `as`) | filter puts a local label right before each branch whose previous instruction is not COP2 (gas does not move across a label); `gas -O1` instead breaks VU0 inline asm |
@@ -63,6 +65,10 @@ hazard nops, errata workarounds) recur on other consoles.
 | VU0 instructions in normal functions | inline asm in the original | write them as `asm()` with the `$vfN` registers spelled out |
 | `lqc2`/`sqc2` in branch-likely delay slots or scheduled among ordinary code | gcc allocated the VU0 register (`register TI v asm("vf1")`, constraint `"j"`); an asm is never put in a slot | that source shape; ee-gcc writes `vf1` without `$`, so the filter adds it |
 | Branch-likely vs plain branch with the slot filled | not the toolchain (22 flag variants, five compiler builds agree): reorg's register-liveness view | C shape or permuter |
+
+Hooks that find a function's original assembly by its name (padding, small-data markers) must resolve a definition
+under an alias (`f_s(...) __asm__("f")`) to `f`: one that did not skipped a `TEXT_PAD`, every function still matched,
+and only the full-build comparison caught the 16 missing bytes.
 
 Open in that project at the time of writing: 26 functions saving `$ra` with `sq`, 58 functions hidden behind 16 bytes
 of `addiu $sp,+X; nop` pairs.
