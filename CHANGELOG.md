@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.3 — 2026-10-23
+
+- Toolchain catalogue: gas flushes a pending `mtc1` hazard nop at `.p2align`; apparent short-loop padding misses
+  that are really per-object unrolling.
+
 ## 1.7.2 — 2026-10-20
 
 - Toolchain catalogue: small-data sizes reset at original object ends (`OBJECT_END()` marker); conditional moves and
