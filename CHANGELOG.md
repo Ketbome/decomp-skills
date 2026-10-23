@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.7.4 — 2026-10-23
+
+- `dk revert` finds functions defined under an alias (`f_s(...) asm("f")`) and says when it finds nothing; it no
+  longer takes a multi-line prototype for a definition.
+- `dk done` refuses to commit when a function the committed file had is now neither written nor INCLUDE_ASM (a
+  worker lost such a line twice; only the full build would have shown it).
+- Functions defined under an alias or with K&R parameter lists are now checked by `dk done`/`dk all` (GH3: 118
+  alias and 97 K&R definitions had been skipped; all match).
+
 ## 1.7.3 — 2026-10-23
 
 - Toolchain catalogue: gas flushes a pending `mtc1` hazard nop at `.p2align`; apparent short-loop padding misses
