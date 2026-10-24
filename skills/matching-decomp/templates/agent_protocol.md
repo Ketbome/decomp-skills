@@ -18,6 +18,8 @@ function's history before you retry it.
    `nonmatching/<func>.<ext>`, `git add` it and commit "near miss: <func>", note it in the worklog, revert, move on.
 6. Give up after ~15 tries: `dk revert <file> <func>`; keep prototypes other code needs; log the reason.
 7. Commit after each match or few: `dk done <file> docs/worklog/<range>.md "decomp: <file> +N functions"`.
+   Bring a saved near miss back with `git merge-file`, never by pasting the whole saved file over the source (it
+   reverts every match made since; `dk done` now refuses that).
 
 Stop only at the limit your prompt gives (matches and functions attempted; count both) or when `dk next <your files> --untried` lists nothing
 you have not tried. Running out of easy candidates is not a reason: raise `--max-size`, take twins, retry give-ups
