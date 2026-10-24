@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.5 — 2026-10-24
+
+- `dk <command> --help` prints that command's usage (it used to take `--help` for a file name and crash).
+- `dk next --min-size N`: list only functions of at least N bytes (a round focused on large functions).
+
 ## 1.7.4 — 2026-10-23
 
 - `dk revert` finds functions defined under an alias (`f_s(...) asm("f")`) and says when it finds nothing; it no

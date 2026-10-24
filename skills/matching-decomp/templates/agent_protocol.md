@@ -8,7 +8,7 @@ function's history before you retry it.
 
 ## Per function
 
-1. Pick: `dk next <your files> --untried [--max-size 0x400]` (smallest first, without what any worklog mentions or
+1. Pick: `dk next <your files> --untried [--max-size 0x400] [--min-size N]` (smallest first, without what any worklog mentions or
    `nonmatching/` holds). Skip `fragment?` entries.
 2. Look: `dk show <func>` (original asm, labels, m2c draft, the source that holds it).
 3. Write the code in place of that function's `INCLUDE_ASM` line only; never touch neighbouring lines.

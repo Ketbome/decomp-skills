@@ -7,7 +7,7 @@ history when you need it.
 
 ## Loop
 
-1. **Pick** — `dk next <your files> --untried [--max-size 0x400]`: smallest first, without the functions any
+1. **Pick** — `dk next <your files> --untried [--max-size 0x400] [--min-size N]`: smallest first, without the functions any
    worklog mentions or `nonmatching/` holds. Skip anything flagged `fragment?` (pieces of a mis-split function).
    Drop `--untried` only when the focus is retrying give-ups that a toolchain fix unblocked.
 2. **Look** — `dk show <func>`: the original assembly (delay-slot instructions indented by one space), labels, an m2c
