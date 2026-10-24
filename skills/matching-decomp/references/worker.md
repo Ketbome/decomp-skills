@@ -27,7 +27,9 @@ history when you need it.
    (renaming symbols, copying local types) and keeps what matches. Run it after matching anything; when choosing
    what to work on, prefer a function that has identical siblings (`dk twins --list`).
 8. **Commit** after each match or few: `dk done <file> docs/worklog/<range>.md "decomp: <file> +N functions"`. It
-   refuses to commit unless every function of the file matches and the file compiles.
+   refuses to commit unless every function of the file matches and the file compiles, and when a function the
+   committed file had written is back in INCLUDE_ASM. To bring a near miss back, merge it (`git merge-file`), never
+   paste the whole saved file over the source: that reverts every match made since it was saved.
 
 Stop only at the limit the prompt gives (in matches and functions attempted: count both and report them) or when
 `dk next --untried` lists nothing left to try: in gh3-decomp all

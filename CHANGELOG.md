@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.7.6 — 2026-10-24
+
+- `dk done` refuses to commit when a function the committed file had written is back in INCLUDE_ASM (a worker pasted
+  an older copy of a file over a newer one and silently reverted a match); `--revert` allows it when intended.
+
 ## 1.7.5 — 2026-10-24
 
 - matching.md: a comparison against a constant that only appears after inlining (`Ge(x, 0)`) keeps the generic
