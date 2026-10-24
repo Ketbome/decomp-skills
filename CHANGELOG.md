@@ -2,6 +2,8 @@
 
 ## 1.7.5 — 2026-10-24
 
+- matching.md: a comparison against a constant that only appears after inlining (`Ge(x, 0)`) keeps the generic
+  sequence the original has (`slti; xori` instead of `nor; srl` for `x >= 0`).
 - `dk <command> --help` prints that command's usage (it used to take `--help` for a file name and crash).
 - `dk next --min-size N`: list only functions of at least N bytes (a round focused on large functions).
 

@@ -18,6 +18,10 @@ MIPS; the ideas carry over to other old compilers.
   inline` helper and the branch stays; try the inverted test too. Check how often the original uses the conditional
   move before blaming a flag (in one game: 1365 times in 663 functions; the flags that kept the branch broke 209
   matched functions).
+- **Comparisons against a constant**: GCC picks the instructions while it still sees the literal (`x >= 0` as a
+  0/1 value gives `nor; srl 31` on MIPS). A constant that only appears after inlining or propagation (`static
+  inline bool Ge(int a, int b) { return a >= b; }` called as `Ge(x, 0)`, or `int z = 0; x >= z`) gives the generic
+  sequence (`slti x,0; xori 1`). Try it when the original has the generic form of a comparison with 0.
 - **Unrolled loops**: if the original has repeated bodies with a constant stride, write the loop and enable
   unrolling for that object.
 
